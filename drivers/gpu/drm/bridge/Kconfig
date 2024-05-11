@@ -436,6 +436,8 @@ source "drivers/gpu/drm/bridge/cadence/Kconfig"
 
 source "drivers/gpu/drm/bridge/imx/Kconfig"
 
+source "drivers/gpu/drm/bridge/innosilicon/Kconfig"
+
 source "drivers/gpu/drm/bridge/synopsys/Kconfig"
 
 endmenu
