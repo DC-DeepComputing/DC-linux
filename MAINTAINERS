@@ -7492,6 +7492,8 @@ S:	Maintained
 T:	git https://gitlab.freedesktop.org/drm/misc/kernel.git
 F:	Documentation/devicetree/bindings/display/bridge/innosilicon,inno-hdmi.yaml
 F:	Documentation/devicetree/bindings/display/starfive/
+F:	drivers/gpu/drm/bridge/innosilicon/
+F:	include/drm/bridge/inno_hdmi.h
 
 DRM DRIVER FOR SYNAPTICS R63353 PANELS
 M:	Michael Trimarchi <michael@amarulasolutions.com>
