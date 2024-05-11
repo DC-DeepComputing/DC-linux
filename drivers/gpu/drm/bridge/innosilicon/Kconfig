@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config DRM_INNO_HDMI
+	tristate
+	help
+	  Support the common interface which is part of the INNO
+	  Designware HDMI block.
