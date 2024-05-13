@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/starfive/starfive,jh7110-dc8200.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: STARFIVE JH7110 SoC display controller
+
+description:
+  The STARFIVE JH7110 SoC uses the display controller based on Verisilicon IP(DC8200)
+  to transfer the image data from a video memory buffer to an external LCD interface.
+
+  pipe0 binds HDMI for primary display,
+  pipe1 binds DSI for external display.
+
+          +------------------------------+
+          |                              |
+          |                              |
+  +----+  |   +-------------------+      |   +-------+   +------+   +------+
+  |    +----->+  dc controller 0  +--->----->+HDMICtl| ->+ PHY  +-->+PANEL0+
+  |AXI |  |   +-------------------+      |   +-------+   +------+   +------+
+  |    |  |                              |
+  |    |  |                              |
+  |    |  |                              |
+  |    |  |                              |
+  |APB |  |   +-------------------+         +---------+    +------+  +-------+
+  |    +----->+  dc controller 1  +--->---->+ dsiTx   +--->+DPHY  +->+ PANEL1+
+  |    |  |   +-------------------+         +---------+    +------+  +-------+
+  +----+  |                              |
+          +------------------------------+
+
+maintainers:
+  - Keith Zhao <keith.zhao@starfivetech.com>
+
+properties:
+  compatible:
+    const: starfive,jh7110-dc8200
+
+  reg:
+    items:
+      - description: host interface address and length
+      - description: display physical base address and length
+
+  reg-names:
+    items:
+      - const: host
+      - const: base
+
+  clocks:
+    items:
+      - description: Clock for display system noc bus.
+      - description: Core clock for display controller.
+      - description: Clock for axi bus to access ddr.
+      - description: Clock for ahb bus to R/W the phy regs.
+      - description: Pixel clock for display channel 0.
+      - description: Pixel clock for display channel 1.
+      - description: Pixel clock from hdmi.
+      - description: Pixel clock for soc .
+
+  clock-names:
+    items:
+      - const: noc_bus
+      - const: dc_core
+      - const: axi_core
+      - const: ahb
+      - const: channel0
+      - const: channel1
+      - const: hdmi_tx
+      - const: dc_parent
+
+  resets:
+    items:
+      - description: Reset for axi bus.
+      - description: Reset for ahb bus.
+      - description: Core reset of display controller.
+
+  reset-names:
+    items:
+      - const: axi
+      - const: ahb
+      - const: core
+
+  interrupts:
+    items:
+      - description: The interrupt will be generated when DC finish one frame
+
+  ports:
+    $ref: /schemas/graph.yaml#/properties/ports
+
+    properties:
+      port@0:
+        $ref: /schemas/graph.yaml#/properties/port
+        description:
+          channel 0 output
+
+      port@1:
+        $ref: /schemas/graph.yaml#/properties/port
+        description:
+          channel 1 output
+
+    required:
+      - port@0
+      - port@1
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - clock-names
+  - ports
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/starfive,jh7110-crg.h>
+    #include <dt-bindings/reset/starfive,jh7110-crg.h>
+    dc8200: lcd-controller@29400000 {
+      compatible = "starfive,jh7110-dc8200";
+        reg = <0x0 0x29400000 0x0 0x100>,
+              <0x0 0x29400800 0x0 0x2000>;
+        reg-names = "host", "base";
+
+        interrupts = <95>;
+        clocks = <&syscrg JH7110_SYSCLK_NOC_BUS_DISP_AXI>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_CORE>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_AXI>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_AHB>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_PIX0>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_PIX1>,
+            <&hdmitx0_pixelclk>,
+            <&voutcrg JH7110_VOUTCLK_DC8200_PIX>;
+        clock-names = "noc_bus", "dc_core", "axi_core", "ahb",
+                  "channel0", "channel1", "hdmi_tx", "dc_parent";
+        resets = <&voutcrg JH7110_VOUTRST_DC8200_AXI>,
+             <&voutcrg JH7110_VOUTRST_DC8200_AHB>,
+             <&voutcrg JH7110_VOUTRST_DC8200_CORE>;
+        reset-names = "axi","ahb", "core";
+
+      crtc_out: ports {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        dc_out0: port@0 {
+          reg = <0>;
+          #address-cells = <1>;
+          #size-cells = <0>;
+
+          dc_out_dpi0: endpoint@0 {
+              reg = <0>;
+              remote-endpoint = <&hdmi_enc>;
+          };
+
+        };
+
+        dc_out1: port@1 {
+          reg = <1>;
+          #address-cells = <1>;
+          #size-cells = <0>;
+
+          dc_out_dpi1: endpoint@1 {
+              reg = <1>;
+              remote-endpoint = <&dsi_enc>;
+          };
+
+        };
+      };
+    };
