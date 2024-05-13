@@ -8,12 +8,6 @@
 #ifndef __INNO_HDMI_H__
 #define __INNO_HDMI_H__
 
-#define DDC_SEGMENT_ADDR		0x30
-
-#define HDMI_SCL_RATE			(100*1000)
-#define DDC_BUS_FREQ_L			0x4b
-#define DDC_BUS_FREQ_H			0x4c
-
 #define HDMI_SYS_CTRL			0x00
 #define m_RST_ANALOG			(1 << 6)
 #define v_RST_ANALOG			(0 << 6)
@@ -97,26 +91,6 @@ enum {
 #define v_AVMUTE_ENABLE(n)		(n << 6)
 #define v_AUDIO_MUTE(n)			(n << 1)
 #define v_VIDEO_MUTE(n)			(n << 0)
-
-#define HDMI_VIDEO_TIMING_CTL		0x08
-#define v_HSYNC_POLARITY(n)		(n << 3)
-#define v_VSYNC_POLARITY(n)		(n << 2)
-#define v_INETLACE(n)			(n << 1)
-#define v_EXTERANL_VIDEO(n)		(n << 0)
-
-#define HDMI_VIDEO_EXT_HTOTAL_L		0x09
-#define HDMI_VIDEO_EXT_HTOTAL_H		0x0a
-#define HDMI_VIDEO_EXT_HBLANK_L		0x0b
-#define HDMI_VIDEO_EXT_HBLANK_H		0x0c
-#define HDMI_VIDEO_EXT_HDELAY_L		0x0d
-#define HDMI_VIDEO_EXT_HDELAY_H		0x0e
-#define HDMI_VIDEO_EXT_HDURATION_L	0x0f
-#define HDMI_VIDEO_EXT_HDURATION_H	0x10
-#define HDMI_VIDEO_EXT_VTOTAL_L		0x11
-#define HDMI_VIDEO_EXT_VTOTAL_H		0x12
-#define HDMI_VIDEO_EXT_VBLANK		0x13
-#define HDMI_VIDEO_EXT_VDELAY		0x14
-#define HDMI_VIDEO_EXT_VDURATION	0x15
 
 #define HDMI_VIDEO_CSC_COEF		0x18
 
@@ -202,14 +176,6 @@ enum {
 #define HDMI_AUDIO_CTS_M		0x46
 #define HDMI_AUDIO_CTS_L		0x47
 
-#define HDMI_DDC_CLK_L			0x4b
-#define HDMI_DDC_CLK_H			0x4c
-
-#define HDMI_EDID_SEGMENT_POINTER	0x4d
-#define HDMI_EDID_WORD_ADDR		0x4e
-#define HDMI_EDID_FIFO_OFFSET		0x4f
-#define HDMI_EDID_FIFO_ADDR		0x50
-
 #define HDMI_PACKET_SEND_MANUAL		0x9c
 #define HDMI_PACKET_SEND_AUTO		0x9d
 #define m_PACKET_GCP_EN			(1 << 7)
@@ -254,22 +220,11 @@ enum {
 #define m_HDMI_DVI			(1 << 1)
 #define v_HDMI_DVI(n)			(n << 1)
 
-#define HDMI_INTERRUPT_MASK1		0xc0
-#define HDMI_INTERRUPT_STATUS1		0xc1
-#define	m_INT_ACTIVE_VSYNC		(1 << 5)
-#define m_INT_EDID_READY		(1 << 2)
-
 #define HDMI_INTERRUPT_MASK2		0xc2
 #define HDMI_INTERRUPT_STATUS2		0xc3
 #define m_INT_HDCP_ERR			(1 << 7)
 #define m_INT_BKSV_FLAG			(1 << 6)
 #define m_INT_HDCP_OK			(1 << 4)
-
-#define HDMI_STATUS			0xc8
-#define m_HOTPLUG			(1 << 7)
-#define m_MASK_INT_HOTPLUG		(1 << 5)
-#define m_INT_HOTPLUG			(1 << 1)
-#define v_MASK_INT_HOTPLUG(n)		((n & 0x1) << 5)
 
 #define HDMI_COLORBAR                   0xc9
 
