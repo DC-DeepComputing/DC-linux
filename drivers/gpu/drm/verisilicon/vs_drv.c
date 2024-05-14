@@ -609,7 +609,9 @@ static const struct component_master_ops vs_drm_ops = {
 };
 
 static struct platform_driver *drm_sub_drivers[] = {
-
+#ifdef CONFIG_DRM_INNO_STARFIVE_HDMI
+	&starfive_hdmi_driver,
+#endif
 };
 
 static struct component_match *vs_add_external_components(struct device *dev)
