@@ -17,6 +17,7 @@
 #include <drm/drm_managed.h>
 
 #include "vs_dc_hw.h"
+#include "vs_simple_enc.h"
 
 /*@pitch_alignment: buffer pitch alignment required by sub-devices.*/
 struct vs_drm_device {
