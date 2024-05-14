@@ -11,3 +11,13 @@ config DRM_VERISILICON_DC8200
 	  This driver provides VeriSilicon kernel mode
 	  setting and buffer management. It does not
 	  provide 2D or 3D acceleration.
+
+if DRM_VERISILICON_DC8200
+config DRM_INNO_STARFIVE_HDMI
+	bool "Starfive JH7110 specific extensions for Innosilicon HDMI"
+	select DRM_INNO_HDMI
+	help
+	  This selects support for StarFive SoC specific extensions
+	  for the Innosilicon HDMI driver. If you want to enable
+	  HDMI on JH7110 based SoC, you should select this option.
+endif
