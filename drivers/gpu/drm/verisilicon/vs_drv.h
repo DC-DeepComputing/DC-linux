@@ -90,4 +90,8 @@ to_vs_plane_state(struct drm_plane_state *state)
 	return container_of(state, struct vs_plane_state, base);
 }
 
+#ifdef CONFIG_DRM_INNO_STARFIVE_HDMI
+extern struct platform_driver starfive_hdmi_driver;
+#endif
+
 #endif /* __VS_DRV_H__ */
