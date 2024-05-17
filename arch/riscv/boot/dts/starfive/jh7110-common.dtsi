@@ -30,6 +30,25 @@
 		reg = <0x0 0x40000000 0x1 0x0>;
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* vout applies for space from this CMA
+		 * Without this CMA reservation,
+		 * vout may not work properly.
+		 */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x20000000>;
+			alignment = <0x0 0x1000>;
+			alloc-ranges = <0x0 0x70000000 0x0 0x20000000>;
+			linux,cma-default;
+		};
+	};
+
 	gpio-restart {
 		compatible = "gpio-restart";
 		gpios = <&sysgpio 35 GPIO_ACTIVE_HIGH>;
@@ -68,6 +87,62 @@
 	timebase-frequency = <4000000>;
 };
 
+&dc8200 {
+	status = "okay";
+	crtc_out: ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		dc_out0: port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			dc_out_dpi0: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&hdmi_enc>;
+			};
+
+		};
+
+		dc_out1: port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			dc_out_dpi1: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&dsi_enc>;
+			};
+
+		};
+	};
+};
+
+&dsi_encoder {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		/* input */
+		enc_in: port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			dsi_enc:endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&dc_out_dpi1>;
+			};
+		};
+		/* output */
+		enc_out: port@1 {
+			reg = <1>;
+			/*need add a remote-endpoint to dsi bridge*/
+		};
+	};
+};
+
 &dvp_clk {
 	clock-frequency = <74250000>;
 };
@@ -86,6 +161,28 @@
 
 &gmac1_rmii_refin {
 	clock-frequency = <50000000>;
+};
+
+&hdmi {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&hdmi_pins>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		hdmi_in: port@0 {
+			reg = <0>;
+			hdmi_enc: endpoint {
+				remote-endpoint = <&dc_out_dpi0>;
+			};
+		};
+
+		hdmi_out: port@1 {
+			reg = <1>;
+		};
+        };
 };
 
 &hdmitx0_pixelclk {
@@ -365,6 +462,40 @@
 };
 
 &sysgpio {
+	hdmi_pins: hdmi-0 {
+		hdmi-cec-pins {
+			pinmux = <GPIOMUX(14, GPOUT_SYS_HDMI_CEC_SDA,
+					     GPOEN_SYS_HDMI_CEC_SDA,
+					     GPI_SYS_HDMI_CEC_SDA)>;
+			input-enable;
+			bias-pull-up;
+		};
+
+		hdmi-hpd-pins {
+			pinmux = <GPIOMUX(15, GPOUT_HIGH,
+					     GPOEN_ENABLE,
+					     GPI_SYS_HDMI_HPD)>;
+			input-enable;
+			bias-disable; /* external pull-up */
+		};
+
+		hdmi-scl-pins {
+			pinmux = <GPIOMUX(0, GPOUT_SYS_HDMI_DDC_SCL,
+					     GPOEN_SYS_HDMI_DDC_SCL,
+					     GPI_SYS_HDMI_DDC_SCL)>;
+			input-enable;
+			bias-pull-up;
+		};
+
+		hdmi-sda-pins {
+			pinmux = <GPIOMUX(1, GPOUT_SYS_HDMI_DDC_SDA,
+					     GPOEN_SYS_HDMI_DDC_SDA,
+					     GPI_SYS_HDMI_DDC_SDA)>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
 	i2c0_pins: i2c0-0 {
 		i2c-pins {
 			pinmux = <GPIOMUX(57, GPOUT_LOW,
@@ -649,4 +780,8 @@
 
 &U74_4 {
 	cpu-supply = <&vdd_cpu>;
+};
+
+&voutcrg {
+	status = "okay";
 };
