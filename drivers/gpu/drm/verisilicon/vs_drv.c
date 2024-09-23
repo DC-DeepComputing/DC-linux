@@ -13,7 +13,8 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_helper.h>
-#include <drm/drm_fbdev_generic.h>
+#include <drm/drm_fbdev_dma.h>
+
 #include <drm/drm_file.h>
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_module.h>
@@ -577,7 +578,7 @@ static int vs_drm_bind(struct device *dev)
 	if (ret)
 		goto err_unbind_all;
 
-	drm_fbdev_generic_setup(drm_dev, 32);
+	drm_fbdev_dma_setup(drm_dev, 0);
 
 	return 0;
 
@@ -653,10 +654,10 @@ static int vs_drm_platform_probe(struct platform_device *pdev)
 	return component_master_add_with_match(dev, &vs_drm_ops, match);
 }
 
-static int vs_drm_platform_remove(struct platform_device *pdev)
+static void vs_drm_platform_remove(struct platform_device *pdev)
 {
 	component_master_del(&pdev->dev, &vs_drm_ops);
-	return 0;
+	return;
 }
 
 #ifdef CONFIG_PM_SLEEP
