@@ -161,14 +161,14 @@ static int vs_encoder_probe(struct platform_device *pdev)
 	return component_add(dev, &encoder_component_ops);
 }
 
-static int vs_encoder_remove(struct platform_device *pdev)
+static void vs_encoder_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	component_del(dev, &encoder_component_ops);
 	dev_set_drvdata(dev, NULL);
 
-	return 0;
+	return;
 }
 
 static const struct of_device_id simple_encoder_dt_match[] = {
