@@ -449,11 +449,11 @@ static int starfive_hdmi_probe(struct platform_device *pdev)
 	return component_add(&pdev->dev, &starfive_hdmi_ops);
 }
 
-static int starfive_hdmi_remove(struct platform_device *pdev)
+static void starfive_hdmi_remove(struct platform_device *pdev)
 {
 	component_del(&pdev->dev, &starfive_hdmi_ops);
 
-	return 0;
+	return;
 }
 
 static const struct inno_hdmi_plat_data stf_inno_info = {
