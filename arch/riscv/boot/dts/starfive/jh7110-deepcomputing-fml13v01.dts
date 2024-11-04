@@ -9,6 +9,60 @@
 / {
 	model = "DeepComputing FML13V01";
 	compatible = "deepcomputing,fml13v01", "starfive,jh7110";
+
+	sound1: snd-card1 {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "StarFive-ES8326-Sound-Card";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			format = "i2s";
+			bitclock-master = <&sndcodec1>;
+			frame-master = <&sndcodec1>;
+			mclk-fs = <256>;
+
+			cpu0 {
+				sound-dai = <&i2stx1>;
+			};
+
+			cpu1 {
+				sound-dai = <&i2srx>;
+			};
+
+			sndcodec1: codec {
+				sound-dai = <&es8326_audio_codec>;
+			};
+		};
+	};
+};
+
+&i2c2 {
+	es8326_audio_codec: es8326@19 {
+		#sound-dai-cells = <0>;
+		compatible = "starfive,es8326";
+		reg = <0x19>;
+		irq-gpio = <&sysgpio 46 GPIO_ACTIVE_HIGH>;
+		spk-ctl-gpio = <&sysgpio 49 GPIO_ACTIVE_HIGH>;
+		everest,jack-pol = [0e];
+		everest,interrupt-src = [08];
+		everest,interrupt-clk = [45];
+		status = "okay";
+	};
+};
+
+&i2srx {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2srx_pins>;
+	status = "okay";
+};
+
+&i2stx1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2stx1_pins>;
+	status = "okay";
 };
 
 &pcie1 {
@@ -20,6 +74,37 @@
 };
 
 &sysgpio {
+	i2srx_pins: i2srx-0 {
+		clk-sd-pins {
+			pinmux = <GPIOMUX(38, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_BCLK)>,
+				 <GPIOMUX(63, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_LRCK)>,
+				 <GPIOMUX(38, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2STX1_BCLK)>,
+				 <GPIOMUX(63, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2STX1_LRCK)>,
+				 <GPIOMUX(44, GPOUT_LOW,
+					      GPOEN_DISABLE,
+					      GPI_SYS_I2SRX_SDIN0)>;
+			input-enable;
+		};
+	};
+
+	i2stx1_pins: i2stx1-0 {
+		sd-pins {
+			pinmux = <GPIOMUX(61, GPOUT_SYS_I2STX1_SDO0,
+					      GPOEN_ENABLE,
+					      GPI_NONE)>;
+			bias-disable;
+			input-disable;
+		};
+	};
+
 	pcie1_pins: pcie1-0 {
 		clkreq-pins {
 			pinmux = <GPIOMUX(29, GPOUT_LOW,
