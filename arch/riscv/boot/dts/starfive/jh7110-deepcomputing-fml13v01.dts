@@ -73,6 +73,11 @@
 	status = "okay";
 };
 
+&pciephy0 {
+	starfive,sys-syscon = <&sys_syscon 0x18>;
+	starfive,stg-syscon = <&stg_syscon 0x148 0x1f4>;
+};
+
 &sysgpio {
 	i2srx_pins: i2srx-0 {
 		clk-sd-pins {
@@ -133,4 +138,9 @@
 &usb0 {
 	dr_mode = "host";
 	status = "okay";
+};
+
+&usb_cdns3 {
+	phys = <&usbphy0>, <&pciephy0>;
+	phy-names = "cdns3,usb2-phy", "cdns3,usb3-phy";
 };
