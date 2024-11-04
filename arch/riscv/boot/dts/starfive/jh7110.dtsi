@@ -577,13 +577,15 @@
 				 <&stgcrg JH7110_STGCLK_USB0_STB>,
 				 <&stgcrg JH7110_STGCLK_USB0_APB>,
 				 <&stgcrg JH7110_STGCLK_USB0_AXI>,
-				 <&stgcrg JH7110_STGCLK_USB0_UTMI_APB>;
-			clock-names = "lpm", "stb", "apb", "axi", "utmi_apb";
+				 <&stgcrg JH7110_STGCLK_USB0_UTMI_APB>,
+				 <&stgcrg JH7110_STGCLK_PCIE0_APB>;
+			clock-names = "lpm", "stb", "apb", "axi", "utmi_apb", "phy";
 			resets = <&stgcrg JH7110_STGRST_USB0_PWRUP>,
 				 <&stgcrg JH7110_STGRST_USB0_APB>,
 				 <&stgcrg JH7110_STGRST_USB0_AXI>,
-				 <&stgcrg JH7110_STGRST_USB0_UTMI_APB>;
-			reset-names = "pwrup", "apb", "axi", "utmi_apb";
+				 <&stgcrg JH7110_STGRST_USB0_UTMI_APB>,
+				 <&stgcrg JH7110_STGRST_PCIE0_APB>;
+			reset-names = "pwrup", "apb", "axi", "utmi_apb", "phy";
 			status = "disabled";
 
 			usb_cdns3: usb@0 {
