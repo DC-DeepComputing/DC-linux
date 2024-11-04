@@ -100,6 +100,11 @@
 	status = "okay";
 };
 
+&pciephy0 {
+	starfive,sys-syscon = <&sys_syscon 0x18>;
+	starfive,stg-syscon = <&stg_syscon 0x148 0x1f4>;
+};
+
 &sysgpio {
 	i2srx_pins: i2srx-0 {
 		clk-sd-pins {
