@@ -78,6 +78,7 @@ static int i2c_hid_of_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct i2c_hid_of *ihid_of;
+	struct gpio_desc *irq_gpio;
 	u16 hid_descriptor_address;
 	u32 quirks = 0;
 	int ret;
@@ -130,6 +131,15 @@ static int i2c_hid_of_probe(struct i2c_client *client)
 
 	if (device_property_read_bool(dev, "touchscreen-inverted-y"))
 		quirks |= HID_QUIRK_Y_INVERT;
+
+	irq_gpio = devm_gpiod_get_optional(dev, "irq", GPIOD_IN);
+	if (!IS_ERR(irq_gpio)) {
+		client->irq = gpiod_to_irq(irq_gpio);
+		if (client->irq > 0) {
+			struct irq_data *irqd = irq_get_irq_data(client->irq);
+			irqd_set_trigger_type(irqd, IRQF_TRIGGER_FALLING);
+		}
+	}
 
 	return i2c_hid_core_probe(client, &ihid_of->ops,
 				  hid_descriptor_address, quirks);
