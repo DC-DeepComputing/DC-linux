@@ -1225,10 +1225,13 @@
 				<&voutcrg JH7110_VOUTCLK_DC8200_PIX>;
 			clock-names = "noc_bus", "dc_core", "axi_core", "ahb",
 				      "channel0", "channel1", "hdmi_tx", "dc_parent";
-			resets = <&voutcrg JH7110_VOUTRST_DC8200_AXI>,
+
+			resets = <&syscrg JH7110_SYSRST_NOC_BUS_DISP_AXI>,
+				 <&syscrg JH7110_SYSRST_VOUT_TOP_SRC>,
+				 <&voutcrg JH7110_VOUTRST_DC8200_AXI>,
 				 <&voutcrg JH7110_VOUTRST_DC8200_AHB>,
 				 <&voutcrg JH7110_VOUTRST_DC8200_CORE>;
-			reset-names = "axi","ahb", "core";
+			reset-names = "noc" ,"src" , "axi" ,"ahb", "core";
 		};
 
 		hdmi: hdmi@29590000 {
