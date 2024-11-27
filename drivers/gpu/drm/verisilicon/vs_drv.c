@@ -8,12 +8,12 @@
 #include <linux/pm_runtime.h>
 #include <linux/of_device.h>
 
-#include <drm/drm_aperture.h>
+#include <linux/aperture.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_helper.h>
-#include <drm/drm_fbdev_dma.h>
+#include <drm/drm_client_setup.h>
 
 #include <drm/drm_file.h>
 #include <drm/drm_gem_dma_helper.h>
@@ -22,6 +22,7 @@
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
 #include <drm/drm_blend.h>
+#include <drm/drm_fbdev_dma.h>
 
 #include "vs_drv.h"
 #include "vs_crtc.h"
@@ -270,6 +271,7 @@ static struct drm_driver vs_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_ATOMIC | DRIVER_GEM,
 
 	DRM_GEM_DMA_DRIVER_OPS_WITH_DUMB_CREATE(vs_gem_dumb_create),
+	DRM_FBDEV_DMA_DRIVER_OPS,
 
 	.fops			= &vs_drm_fops,
 	.name			= DRV_NAME,
@@ -544,7 +546,7 @@ static int vs_drm_bind(struct device *dev)
 	vs_mode_config_init(drm_dev);
 
 	/* Remove existing drivers that may own the framebuffer memory. */
-	ret = drm_aperture_remove_framebuffers(&vs_drm_driver);
+	ret = aperture_remove_all_conflicting_devices(vs_drm_driver.name);
 	if (ret)
 		return ret;
 
@@ -578,7 +580,7 @@ static int vs_drm_bind(struct device *dev)
 	if (ret)
 		goto err_unbind_all;
 
-	drm_fbdev_dma_setup(drm_dev, 0);
+	drm_client_setup(drm_dev, NULL);
 
 	return 0;
 
