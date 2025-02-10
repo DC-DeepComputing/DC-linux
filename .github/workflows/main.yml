@@ -23,6 +23,12 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Set proxy environment variables
+        run: |
+          echo "Setting up proxy"
+          export http_proxy="http://10.10.3.72:7890"
+          export https_proxy="http://10.10.3.72:7890"
+        shell: bash
       - uses: actions/checkout@v4
       # Runs a set of commands using the runners shell
       - name: build-linux
