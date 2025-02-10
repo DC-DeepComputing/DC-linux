@@ -13,7 +13,7 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_helper.h>
-#include <drm/drm_client_setup.h>
+#include <drm/clients/drm_client_setup.h>
 
 #include <drm/drm_file.h>
 #include <drm/drm_gem_dma_helper.h>
@@ -31,7 +31,6 @@
 
 #define DRV_NAME	"verisilicon"
 #define DRV_DESC	"Verisilicon DRM driver"
-#define DRV_DATE	"20230516"
 #define DRV_MAJOR	1
 #define DRV_MINOR	0
 
@@ -276,7 +275,6 @@ static struct drm_driver vs_drm_driver = {
 	.fops			= &vs_drm_fops,
 	.name			= DRV_NAME,
 	.desc			= DRV_DESC,
-	.date			= DRV_DATE,
 	.major			= DRV_MAJOR,
 	.minor			= DRV_MINOR,
 };
