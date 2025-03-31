@@ -116,7 +116,7 @@ static int inno_hdmi_connector_get_modes(struct drm_connector *connector)
 }
 
 static enum drm_mode_status
-inno_hdmi_connector_mode_valid(struct drm_connector *connector, struct drm_display_mode *mode)
+inno_hdmi_connector_mode_valid(struct drm_connector *connector, const struct drm_display_mode *mode)
 {
 	struct inno_hdmi *hdmi = connector_to_inno_hdmi(connector);
 
