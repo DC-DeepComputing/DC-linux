@@ -2,7 +2,7 @@
 VERSION = 6
 PATCHLEVEL = 15
 SUBLEVEL = 0
-EXTRAVERSION = -rc2
+EXTRAVERSION = -rc3
 NAME = Baby Opossum Posse
 
 # *DOCUMENTATION*
@@ -1055,6 +1055,9 @@ KBUILD_CFLAGS += $(call cc-option, -fstrict-flex-arrays=3)
 #Currently, disable -Wstringop-overflow for GCC 11, globally.
 KBUILD_CFLAGS-$(CONFIG_CC_NO_STRINGOP_OVERFLOW) += $(call cc-option, -Wno-stringop-overflow)
 KBUILD_CFLAGS-$(CONFIG_CC_STRINGOP_OVERFLOW) += $(call cc-option, -Wstringop-overflow)
+
+#Currently, disable -Wunterminated-string-initialization as an error
+KBUILD_CFLAGS += $(call cc-option, -Wno-error=unterminated-string-initialization)
 
 # disable invalid "can't wrap" optimizations for signed / pointers
 KBUILD_CFLAGS	+= -fno-strict-overflow
