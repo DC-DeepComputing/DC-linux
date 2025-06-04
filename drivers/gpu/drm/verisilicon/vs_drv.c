@@ -570,9 +570,7 @@ static int vs_drm_bind(struct device *dev)
 
 	drm_mode_config_reset(drm_dev);
 
-	ret = drmm_kms_helper_poll_init(drm_dev);
-	if (ret)
-		goto err_unbind_all;
+	drmm_kms_helper_poll_init(drm_dev);
 
 	ret = drm_dev_register(drm_dev, 0);
 	if (ret)
