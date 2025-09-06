@@ -39,3 +39,4 @@ obj-$(CONFIG_ARCH_U8500)	+= ux500/
 obj-y				+= versatile/
 obj-y				+= vt8500/
 obj-y				+= xilinx/
+obj-$(CONFIG_ARCH_SPACEMIT)	+= spacemit/
