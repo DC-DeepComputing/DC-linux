@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo docker ps   
           pwd
-          sudo docker run --rm --name build-linux-$GITHUB_RUN_ID --privileged=true -v /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux:/home  main-linux:v1 /bin/bash -c "cd /home && export ARCH=riscv && export INSTALL_MOD_PATH=/home && export CROSS_COMPILE=/usr/bin/riscv64-linux-gnu- && make defconfig && make -j$(nproc) && make modules_install"
+          sudo docker run --rm --name build-linux-$GITHUB_RUN_ID --privileged=true -v /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux:/home  main-linux:v2 /bin/bash -c "cd /home && export ARCH=riscv && export INSTALL_MOD_PATH=/home && export CROSS_COMPILE=/usr/bin/riscv64-linux-gnu- && make defconfig && make -j$(nproc) && make modules_install"
           sudo chown -R gitlab-runner:gitlab-runner /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux  
           sudo chmod -R 755 /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux
       - name: send-mail
