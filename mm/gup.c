@@ -2853,7 +2853,10 @@ static unsigned long gup_fast_pte_range(pmd_t pmd, pmd_t *pmdp,
 	unsigned long nr_pages = 0;
 	pte_t *ptep, *ptem;
 
+	/* transform pmd as if &pmd pointed to a hardware page table */
+	set_pmd(&pmd, pmd);
 	ptem = ptep = pte_offset_map(&pmd, addr);
+	pmd = pmdp_get(&pmd);
 	if (!ptep)
 		return 0;
 	do {
