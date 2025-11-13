@@ -628,6 +628,7 @@ config RISCV_ISA_SVPBMT
 	bool "Svpbmt extension support for supervisor mode page-based memory types"
 	depends on 64BIT && MMU
 	default y
+	select DMA_DIRECT_REMAP
 	help
 	   Add support for the Svpbmt ISA-extension (Supervisor-mode:
 	   page-based memory types) in the kernel when it is detected at boot.
@@ -834,7 +835,6 @@ config RISCV_ISA_ZICBOM
 	depends on MMU
 	default y
 	select RISCV_DMA_NONCOHERENT
-	select DMA_DIRECT_REMAP
 	help
 	   Add support for the Zicbom extension (Cache Block Management
 	   Operations) and enable its use in the kernel when it is detected
