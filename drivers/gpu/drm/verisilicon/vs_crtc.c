@@ -8,6 +8,7 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_gem_atomic_helper.h>
 #include <drm/drm_vblank.h>
+#include <drm/drm_print.h>
 
 #include "vs_crtc.h"
 

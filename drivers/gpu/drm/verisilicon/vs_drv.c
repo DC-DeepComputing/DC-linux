@@ -23,6 +23,7 @@
 #include <drm/drm_vblank.h>
 #include <drm/drm_blend.h>
 #include <drm/drm_fbdev_dma.h>
+#include <drm/drm_print.h>
 
 #include "vs_drv.h"
 #include "vs_crtc.h"
