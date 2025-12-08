@@ -10,6 +10,7 @@
 #include <drm/drm_framebuffer.h>
 #include <drm/drm_plane.h>
 #include <drm/drm_plane_helper.h>
+#include <drm/drm_print.h>
 
 #include "vs_plane.h"
 
@@ -150,7 +151,7 @@ static int vs_primary_plane_atomic_check(struct drm_plane *plane, struct drm_ato
 		return -EINVAL;
 	}
 
-	crtc_state = drm_atomic_get_existing_crtc_state(new_state->state, new_state->crtc);
+	crtc_state = drm_atomic_get_new_crtc_state(new_state->state, new_state->crtc);
 	return drm_atomic_helper_check_plane_state(new_state, crtc_state,
 						   primary_info->min_scale,
 						   primary_info->max_scale,
@@ -190,7 +191,7 @@ static int vs_overlay_plane_atomic_check(struct drm_plane *plane, struct drm_ato
 		return -EINVAL;
 }
 
-	crtc_state = drm_atomic_get_existing_crtc_state(new_state->state, new_state->crtc);
+	crtc_state = drm_atomic_get_new_crtc_state(new_state->state, new_state->crtc);
 	return drm_atomic_helper_check_plane_state(new_state, crtc_state,
 						   overlay_info->min_scale,
 						   overlay_info->max_scale,
@@ -225,7 +226,7 @@ static int vs_cursor_plane_atomic_check(struct drm_plane *plane, struct drm_atom
 		drm_err_once(plane->dev, "buffer size may not support on plane%d.\n",
 			     to_vs_plane(plane)->id);
 
-	crtc_state = drm_atomic_get_existing_crtc_state(new_state->state, new_state->crtc);
+	crtc_state = drm_atomic_get_new_crtc_state(new_state->state, new_state->crtc);
 	return drm_atomic_helper_check_plane_state(new_state, crtc_state,
 						   DRM_PLANE_NO_SCALING,
 						   DRM_PLANE_NO_SCALING,
