@@ -28,6 +28,9 @@
 #define _PAGE_IO		0
 #define _PAGE_MTMASK		0
 
+#define ALT_FIXUP_MT(_val)
+#define ALT_UNFIX_MT(_val)
+
 static inline bool pgtable_l4_enabled(void) { return false; }
 static inline bool pgtable_l5_enabled(void) { return false; }
 
