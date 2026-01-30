@@ -1105,11 +1105,11 @@ static void smaps_pmd_entry(pmd_t *pmd, unsigned long addr,
 
 	if (pmd_none(*pmd))
 		return;
-	if (pmd_present(*pmd)) {
-		page = vm_normal_page_pmd(vma, addr, *pmd);
+	if (pmd_present(pmdp_get(pmd))) {
+		page = vm_normal_page_pmd(vma, addr, pmdp_get(pmd));
 		present = true;
 	} else if (unlikely(thp_migration_supported())) {
-		const softleaf_t entry = softleaf_from_pmd(*pmd);
+		const softleaf_t entry = softleaf_from_pmd(pmdp_get(pmd));
 
 		if (softleaf_has_pfn(entry))
 			page = softleaf_to_page(entry);
@@ -1126,7 +1126,8 @@ static void smaps_pmd_entry(pmd_t *pmd, unsigned long addr,
 	else
 		mss->file_thp += HPAGE_PMD_SIZE;
 
-	smaps_account(mss, page, true, pmd_young(*pmd), pmd_dirty(*pmd),
+	smaps_account(mss, page, true, pmd_young(pmdp_get(pmd)),
+		      pmd_dirty(pmdp_get(pmd)),
 		      locked, present);
 }
 #else
@@ -1735,7 +1736,7 @@ static inline void clear_soft_dirty(struct vm_area_struct *vma,
 static inline void clear_soft_dirty_pmd(struct vm_area_struct *vma,
 		unsigned long addr, pmd_t *pmdp)
 {
-	pmd_t old, pmd = *pmdp;
+	pmd_t old, pmd = pmdp_get(pmdp);
 
 	if (!pgtable_supports_soft_dirty())
 		return;
@@ -1780,10 +1781,10 @@ static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 			goto out;
 		}
 
-		if (!pmd_present(*pmd))
+		if (!pmd_present(pmdp_get(pmd)))
 			goto out;
 
-		folio = pmd_folio(*pmd);
+		folio = pmd_folio(pmdp_get(pmd));
 
 		/* Clear accessed and referenced bits. */
 		pmdp_test_and_clear_young(vma, addr, pmd);
@@ -2091,7 +2092,7 @@ static int pagemap_pmd_range_thp(pmd_t *pmdp, unsigned long addr,
 {
 	unsigned int idx = (addr & ~PMD_MASK) >> PAGE_SHIFT;
 	u64 flags = 0, frame = 0;
-	pmd_t pmd = *pmdp;
+	pmd_t pmd = pmdp_get(pmdp);
 	struct page *page = NULL;
 	struct folio *folio = NULL;
 	int err = 0;
@@ -2543,7 +2544,7 @@ static unsigned long pagemap_thp_category(struct pagemap_scan_private *p,
 static void make_uffd_wp_pmd(struct vm_area_struct *vma,
 			     unsigned long addr, pmd_t *pmdp)
 {
-	pmd_t old, pmd = *pmdp;
+	pmd_t old, pmd = pmdp_get(pmdp);
 
 	if (pmd_present(pmd)) {
 		old = pmdp_invalidate_ad(vma, addr, pmdp);
@@ -2785,7 +2786,7 @@ static int pagemap_scan_thp_entry(pmd_t *pmd, unsigned long start,
 		return -ENOENT;
 
 	categories = p->cur_vma_category |
-		     pagemap_thp_category(p, vma, start, *pmd);
+		     pagemap_thp_category(p, vma, start, pmdp_get(pmd));
 
 	if (!pagemap_scan_is_interesting_page(categories, p))
 		goto out_unlock;
@@ -3376,9 +3377,9 @@ static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
 	if (ptl) {
 		struct page *page;
 
-		page = can_gather_numa_stats_pmd(*pmd, vma, addr);
+		page = can_gather_numa_stats_pmd(pmdp_get(pmd), vma, addr);
 		if (page)
-			gather_stats(page, md, pmd_dirty(*pmd),
+			gather_stats(page, md, pmd_dirty(pmdp_get(pmd)),
 				     HPAGE_PMD_SIZE/PAGE_SIZE);
 		spin_unlock(ptl);
 		return 0;

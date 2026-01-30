@@ -500,7 +500,7 @@ again:
 			break;
 		}
 
-		if (pmd_none(*pmd))
+		if (pmd_none(pmdp_get(pmd)))
 			goto next;
 
 		_pmd = pmdp_get_lockless(pmd);

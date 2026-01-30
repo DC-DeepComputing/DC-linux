@@ -253,7 +253,7 @@ static int migrate_vma_collect_pmd(pmd_t *pmdp,
 	pte_t *ptep;
 
 again:
-	if (pmd_trans_huge(*pmdp) || !pmd_present(*pmdp)) {
+	if (pmd_trans_huge(pmdp_get(pmdp)) || !pmd_present(pmdp_get(pmdp))) {
 		int ret = migrate_vma_collect_huge_pmd(pmdp, start, end, walk, fault_folio);
 
 		if (ret == -EAGAIN)
@@ -1004,12 +1004,12 @@ static void migrate_vma_insert_page(struct migrate_vma *migrate,
 		return;
 	}
 
-	if (!pmd_none(*pmdp)) {
-		if (pmd_trans_huge(*pmdp)) {
-			if (!is_huge_zero_pmd(*pmdp))
+	if (!pmd_none(pmdp_get(pmdp))) {
+		if (pmd_trans_huge(pmdp_get(pmdp))) {
+			if (!is_huge_zero_pmd(pmdp_get(pmdp)))
 				goto abort;
 			split_huge_pmd(vma, pmdp, addr);
-		} else if (pmd_leaf(*pmdp))
+		} else if (pmd_leaf(pmdp_get(pmdp)))
 			goto abort;
 	}
 

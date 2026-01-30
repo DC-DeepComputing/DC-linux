@@ -1386,7 +1386,7 @@ static enum scan_result collapse_huge_page(struct mm_struct *mm, unsigned long s
 
 	if (unlikely(result != SCAN_SUCCEED)) {
 		spin_lock(pmd_ptl);
-		VM_WARN_ON_ONCE(!pmd_none(*pmd));
+		VM_WARN_ON_ONCE(!pmd_none(pmdp_get(pmd)));
 		/*
 		 * We can only use set_pmd_at when establishing
 		 * hugepmds and never for establishing regular pmds that
@@ -1422,7 +1422,7 @@ static enum scan_result collapse_huge_page(struct mm_struct *mm, unsigned long s
 	 */
 	__folio_mark_uptodate(folio);
 	spin_lock(pmd_ptl);
-	VM_WARN_ON_ONCE(!pmd_none(*pmd));
+	VM_WARN_ON_ONCE(!pmd_none(pmdp_get(pmd)));
 	if (is_pmd_order(order)) {
 		pgtable = pmd_pgtable(_pmd);
 		pgtable_trans_huge_deposit(mm, pmd, pgtable);
