@@ -103,7 +103,7 @@ static pmd_t *get_old_pmd(struct mm_struct *mm, unsigned long addr)
 		return NULL;
 
 	pmd = pmd_offset(pud, addr);
-	if (pmd_none(*pmd))
+	if (pmd_none(pmdp_get(pmd)))
 		return NULL;
 
 	return pmd;
@@ -135,7 +135,7 @@ static pmd_t *alloc_new_pmd(struct mm_struct *mm, unsigned long addr)
 	if (!pmd)
 		return NULL;
 
-	VM_BUG_ON(pmd_trans_huge(*pmd));
+	VM_BUG_ON(pmd_trans_huge(pmdp_get(pmd)));
 
 	return pmd;
 }
@@ -390,14 +390,14 @@ static bool move_normal_pmd(struct pagetable_move_control *pmc,
 	 * One alternative might be to just unmap the target pmd at
 	 * this point, and verify that it really is empty. We'll see.
 	 */
-	if (WARN_ON_ONCE(!pmd_none(*new_pmd)))
+	if (WARN_ON_ONCE(!pmd_none(pmdp_get(new_pmd))))
 		return false;
 
 	old_ptl = pmd_lockptr(mm, old_pmd);
 	new_ptl = pmd_lockptr(mm, new_pmd);
 	double_pt_lock(old_ptl, new_ptl);
 
-	pmd = *old_pmd;
+	pmd = pmdp_get(old_pmd);
 
 	/* Racing with collapse? */
 	if (unlikely(!pmd_present(pmd) || pmd_leaf(pmd)))
@@ -406,7 +406,7 @@ static bool move_normal_pmd(struct pagetable_move_control *pmc,
 	pmd_clear(old_pmd);
 	res = true;
 
-	VM_BUG_ON(!pmd_none(*new_pmd));
+	VM_BUG_ON(!pmd_none(pmdp_get(new_pmd)));
 
 	pmd_populate(mm, new_pmd, pmd_pgtable(pmd));
 	flush_tlb_range(vma, pmc->old_addr, pmc->old_addr + PMD_SIZE);
@@ -440,7 +440,7 @@ static bool move_normal_pud(struct pagetable_move_control *pmc,
 	 * The destination pud shouldn't be established, free_pgtables()
 	 * should have released it.
 	 */
-	if (WARN_ON_ONCE(!pud_none(*new_pud)))
+	if (WARN_ON_ONCE(!pud_none(pudp_get(new_pud))))
 		return false;
 
 	old_ptl = pud_lockptr(mm, old_pud);
@@ -455,7 +455,7 @@ static bool move_normal_pud(struct pagetable_move_control *pmc,
 	/* Clear the pud */
 	pud_clear(old_pud);
 
-	VM_BUG_ON(!pud_none(*new_pud));
+	VM_BUG_ON(!pud_none(pudp_get(new_pud)));
 
 	pud_populate(mm, new_pud, pud_pgtable(pud));
 	flush_tlb_range(vma, pmc->old_addr, pmc->old_addr + PUD_SIZE);
@@ -485,7 +485,7 @@ static bool move_huge_pud(struct pagetable_move_control *pmc,
 	 * The destination pud shouldn't be established, free_pgtables()
 	 * should have released it.
 	 */
-	if (WARN_ON_ONCE(!pud_none(*new_pud)))
+	if (WARN_ON_ONCE(!pud_none(pudp_get(new_pud))))
 		return false;
 
 	old_ptl = pud_lockptr(mm, old_pud);
@@ -500,7 +500,7 @@ static bool move_huge_pud(struct pagetable_move_control *pmc,
 	/* Clear the pud */
 	pud = pudp_huge_get_and_clear(mm, pmc->old_addr, old_pud);
 
-	VM_BUG_ON(!pud_none(*new_pud));
+	VM_BUG_ON(!pud_none(pudp_get(new_pud)));
 
 	/* Set the new pud */
 	/* mark soft_ditry when we add pud level soft dirty support */
@@ -827,7 +827,7 @@ unsigned long move_page_tables(struct pagetable_move_control *pmc)
 		new_pud = alloc_new_pud(mm, pmc->new_addr);
 		if (!new_pud)
 			break;
-		if (pud_trans_huge(*old_pud)) {
+		if (pud_trans_huge(pudp_get(old_pud))) {
 			if (extent == HPAGE_PUD_SIZE &&
 			    move_pgt_entry(pmc, HPAGE_PUD, old_pud, new_pud))
 				continue;
@@ -845,7 +845,7 @@ unsigned long move_page_tables(struct pagetable_move_control *pmc)
 		if (!new_pmd)
 			break;
 again:
-		if (pmd_is_huge(*old_pmd)) {
+		if (pmd_is_huge(pmdp_get(old_pmd))) {
 			if (extent == HPAGE_PMD_SIZE &&
 			    move_pgt_entry(pmc, HPAGE_PMD, old_pmd, new_pmd))
 				continue;
@@ -859,7 +859,7 @@ again:
 			if (move_pgt_entry(pmc, NORMAL_PMD, old_pmd, new_pmd))
 				continue;
 		}
-		if (pmd_none(*old_pmd))
+		if (pmd_none(pmdp_get(old_pmd)))
 			continue;
 		if (pte_alloc(pmc->new->vm_mm, new_pmd))
 			break;
