@@ -264,11 +264,6 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 
-			hsp_sp_csr: hsp-sp-top-csr@50440000 {
-				compatible = "eswin,eic7700-syscfg", "syscon";
-				reg = <0x0 0x50440000 0x0 0x2000>;
-			};
-
 			gmac0: ethernet@50400000 {
 				compatible = "eswin,eic7700-qos-eth",
 					     "snps,dwmac-5.20";
@@ -333,6 +328,67 @@
 					snps,rd_osr_lmt = <2>;
 					snps,wr_osr_lmt = <2>;
 				};
+			};
+
+			hsp_sp_csr: hsp-sp-top-csr@50440000 {
+				compatible = "eswin,eic7700-syscfg", "syscon";
+				reg = <0x0 0x50440000 0x0 0x2000>;
+			};
+
+			sdhci_emmc: mmc@50450000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50450000 0x0 0x10000>;
+				interrupts = <79>;
+				assigned-clocks = <&clk EIC7700_CLK_GATE_HSP_MSHC0_CORE_CLK>;
+				assigned-clock-rates = <200000000>;
+				bus-width = <8>;
+				clocks = <&clk EIC7700_CLK_GATE_HSP_MSHC0_CORE_CLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <200000000>;
+				resets = <&reset EIC7700_RESET_HSP_EMMC_ARST>,
+					 <&reset EIC7700_RESET_MSHC0_PHY>,
+					 <&reset EIC7700_RESET_HSP_EMMC_PRST>,
+					 <&reset EIC7700_RESET_MSHC0_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&hsp_sp_csr 0x508 0x50c>;
+				status = "disabled";
+			};
+
+			sdio0: mmc@50460000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50460000 0x0 0x10000>;
+				interrupts = <81>;
+				bus-width = <4>;
+				clocks = <&clk EIC7700_CLK_GATE_HSP_MSHC1_CORE_CLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <208000000>;
+				resets = <&reset EIC7700_RESET_HSP_SD0_ARST>,
+					 <&reset EIC7700_RESET_MSHC1_PHY>,
+					 <&reset EIC7700_RESET_HSP_SD0_PRST>,
+					 <&reset EIC7700_RESET_MSHC1_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&hsp_sp_csr 0x608 0x60c>;
+				status = "disabled";
+			};
+
+			sdio1: mmc@50470000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50470000 0x0 0x10000>;
+				interrupts = <83>;
+				bus-width = <4>;
+				clocks = <&clk EIC7700_CLK_GATE_HSP_MSHC2_CORE_CLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <208000000>;
+				resets = <&reset EIC7700_RESET_HSP_SD1_ARST>,
+					 <&reset EIC7700_RESET_MSHC2_PHY>,
+					 <&reset EIC7700_RESET_HSP_SD1_PRST>,
+					 <&reset EIC7700_RESET_MSHC2_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&hsp_sp_csr 0x708 0x70c>;
+				status = "disabled";
 			};
 		};
 
