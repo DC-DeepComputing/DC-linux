@@ -17,7 +17,6 @@
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
 #include <linux/gpio.h>
-#include <linux/of_gpio.h>
 #include "es8326.h"
 
 struct es8326_priv {
