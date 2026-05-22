@@ -5,6 +5,8 @@
 
 /dts-v1/;
 #include <dt-bindings/clock/eswin,eic7700-clock.h>
+#include <dt-bindings/clock/eswin,eic7700-hspcrg.h>
+#include <dt-bindings/reset/eswin,eic7700-hspcrg.h>
 #include <dt-bindings/reset/eswin,eic7700-reset.h>
 #include <dt-bindings/riscv/physical-memory.h>
 
@@ -390,6 +392,17 @@
 				eswin,hsp-sp-csr = <&hsp_sp_csr 0x708 0x70c>;
 				status = "disabled";
 			};
+		};
+
+		hspcrg: clock-controller@50440000 {
+			compatible = "eswin,eic7700-hspcrg";
+			reg = <0x0 0x50440000 0x0 0x2000>;
+			clocks = <&clk EIC7700_CLK_GATE_HSP_CFG_CLK>,
+				 <&clk EIC7700_CLK_FIXED_FACTOR_CLK_1M_DIV24>,
+				 <&clk EIC7700_CLK_GATE_HSP_SATA_OOB_CLK>;
+			clock-names = "cfg", "mmc", "sata";
+			#clock-cells = <1>;
+			#reset-cells = <1>;
 		};
 
 		wdt0: watchdog@50800000 {
