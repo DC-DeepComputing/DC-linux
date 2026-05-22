@@ -418,6 +418,44 @@
 				eswin,hsp-sp-csr = <&hsp_sp_csr 0x708 0x70c>;
 				status = "disabled";
 			};
+
+			usb0: usb@50480000 {
+				compatible = "eswin,eic7700-dwc3";
+				reg = <0x0 0x50480000 0x0 0x10000>;
+				interrupts = <85>;
+				interrupt-names = "peripheral";
+				clocks = <&clk EIC7700_CLK_GATE_HSP_ACLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					 <&hspcrg EIC7700_HSP_CLK_GATE_USB0>;
+				clock-names = "aclk", "cfg", "usb_en";
+				dr_mode = "host";
+				maximum-speed = "high-speed";
+				phy_type = "utmi";
+				resets = <&reset EIC7700_RESET_USB0_VAUX>,
+					 <&hspcrg EIC7700_HSP_RST_USB0>;
+				reset-names = "vaux", "usb_rst";
+				eswin,hsp-sp-csr = <&hsp_sp_csr 0x800 0x818>;
+				status = "disabled";
+			};
+
+			usb1: usb@50490000 {
+				compatible = "eswin,eic7700-dwc3";
+				reg = <0x0 0x50490000 0x0 0x10000>;
+				interrupts = <86>;
+				interrupt-names = "host";
+				clocks = <&clk EIC7700_CLK_GATE_HSP_ACLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					 <&hspcrg EIC7700_HSP_CLK_GATE_USB1>;
+				clock-names = "aclk", "cfg", "usb_en";
+				dr_mode = "host";
+				maximum-speed = "high-speed";
+				phy_type = "utmi";
+				resets = <&reset EIC7700_RESET_USB1_VAUX>,
+					 <&hspcrg EIC7700_HSP_RST_USB1>;
+				reset-names = "vaux", "usb_rst";
+				eswin,hsp-sp-csr = <&hsp_sp_csr 0x900 0x918>;
+				status = "disabled";
+			};
 		};
 
 		hspcrg: clock-controller@50440000 {
