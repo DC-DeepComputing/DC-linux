@@ -332,6 +332,32 @@
 				};
 			};
 
+			sata: sata@50420000 {
+				compatible = "eswin,eic7700-ahci", "snps,dwc-ahci";
+				reg = <0x0 0x50420000 0x0 0x10000>;
+				interrupts = <58>;
+				clocks = <&clk EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					 <&clk EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "pclk", "aclk";
+				phys = <&sata_phy>;
+				phy-names = "sata-phy";
+				ports-implemented = <0x1>;
+				resets = <&reset EIC7700_RESET_SATA_ARST>;
+				reset-names = "arst";
+				status = "disabled";
+			};
+
+			sata_phy: sata-phy@50440300 {
+				compatible = "eswin,eic7700-sata-phy";
+				reg = <0x0 0x50440300 0x0 0x40>;
+				clocks = <&hspcrg EIC7700_HSP_CLK_GATE_SATA>;
+				clock-names = "phy";
+				resets = <&hspcrg EIC7700_HSP_RST_SATA_P0>,
+					 <&hspcrg EIC7700_HSP_RST_SATA_PHY>;
+				reset-names = "port", "phy";
+				#phy-cells = <0>;
+			};
+
 			hsp_sp_csr: hsp-sp-top-csr@50440000 {
 				compatible = "eswin,eic7700-syscfg", "syscon";
 				reg = <0x0 0x50440000 0x0 0x2000>;
