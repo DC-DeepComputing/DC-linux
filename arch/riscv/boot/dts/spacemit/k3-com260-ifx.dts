@@ -19,3 +19,7 @@
 		stdout-path = "serial0:115200n8";
 	};
 };
+
+&ufshc {
+	status = "okay";
+};
