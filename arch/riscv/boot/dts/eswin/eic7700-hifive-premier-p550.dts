@@ -20,6 +20,11 @@
 	};
 };
 
+&clock_24m {
+	clock-frequency = <24000000>;
+	clock-output-names = "clock_24m";
+};
+
 &uart0 {
 	status = "okay";
 };
