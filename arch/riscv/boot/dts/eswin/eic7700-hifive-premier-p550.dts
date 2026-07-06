@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "eic7700.dtsi"
+#include "eic7700-pinctrl.dtsi"
 
 / {
 	compatible = "sifive,hifive-premier-p550", "eswin,eic7700";
@@ -18,11 +19,119 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+
+	vcc_1v8: regulator-vcc1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
 };
 
 &clock_24m {
 	clock-frequency = <24000000>;
 	clock-output-names = "clock_24m";
+};
+
+&gpio0_pins {
+	bias-disable;
+	input-enable;
+};
+
+&gpio5_pins {
+	bias-disable;
+	input-enable;
+};
+
+&gpio11_pins {
+	bias-disable;
+	input-enable;
+};
+
+&gpio14_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio15_pins {
+	bias-disable;
+	input-enable;
+};
+
+&gpio28_pins {
+	bias-disable;
+	input-enable;
+};
+
+&gpio43_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio71_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio74_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio76_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio77_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio79_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio80_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio82_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio84_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio85_pins {
+	bias-pull-up;
+	input-disable;
+};
+
+&gpio94_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio106_pins {
+	bias-disable;
+	input-disable;
+};
+
+&gpio111_pins {
+	bias-disable;
+	input-disable;
+};
+
+&pinctrl {
+	vrgmii-supply = <&vcc_1v8>;
 };
 
 &uart0 {
