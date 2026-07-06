@@ -349,6 +349,11 @@
 			};
 		};
 
+		pinctrl: pinctrl@51600080 {
+			compatible = "eswin,eic7700-pinctrl";
+			reg = <0x0 0x51600080 0x0 0x1fff80>;
+		};
+
 		clk: clock-controller@51828000 {
 			compatible = "eswin,eic7700-clock";
 			reg = <0x0 0x51828000 0x0 0x300>;
