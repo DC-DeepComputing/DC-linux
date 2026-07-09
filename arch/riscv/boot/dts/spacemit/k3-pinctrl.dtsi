@@ -734,46 +734,75 @@
 		};
 	};
 
+	pcie0_0_cfg: pcie0-0-cfg {
+		pcie0-0-pins {
+			pinmux = <K3_PADCONF(79, 5)>,   /* pcie0 perst */
+				 <K3_PADCONF(81, 5)>;	/* pcie0 clkreq */
+
+			bias-pull-up = <1>;
+			drive-strength = <33>;
+			power-source = <1800>;
+		};
+	};
+
+	pcie2_0_cfg: pcie2-0-cfg {
+		pcie2-0-pins {
+			pinmux = <K3_PADCONF(25, 4)>,	/* pcie2 perst */
+				 <K3_PADCONF(27, 4)>;	/* pcie2 clkreq */
+
+			drive-strength = <38>;
+			power-source = <3300>;
+		};
+	};
+
+	pcie4_0_cfg: pcie4-0-cfg {
+		pcie4-0-pins {
+			pinmux = <K3_PADCONF(76, 5)>,	/* pcie4 perst */
+				 <K3_PADCONF(77, 5)>,	/* pcie4 wake */
+				 <K3_PADCONF(78, 5)>;	/* pcie4 clkreq */
+
+			bias-pull-up = <1>;
+			drive-strength = <33>;
+			power-source = <1800>;
+		};
+	};
+
 	mmc1_cfg: mmc1-cfg {
 		mmc1-data-cmd-pins {
-			pinmux = <K3_PADCONF(132, 0)>,	/* mmc1 dat3 */
-				 <K3_PADCONF(133, 0)>,	/* mmc1 dat2 */
-				 <K3_PADCONF(134, 0)>,	/* mmc1 dat1 */
-				 <K3_PADCONF(135, 0)>,	/* mmc1 dat0 */
-				 <K3_PADCONF(136, 0)>;	/* mmc1 cmd */
-
-			bias-pull-up = <0>;
-			drive-strength = <25>;
+			pinmux = <K1_PADCONF(104, 0)>,   /* mmc1_d3 */
+				<K1_PADCONF(105, 0)>,   /* mmc1_d2 */
+				<K1_PADCONF(106, 0)>,   /* mmc1_d1 */
+				<K1_PADCONF(107, 0)>,   /* mmc1_d0 */
+				<K1_PADCONF(108, 0)>;   /* mmc1_cmd */
+			bias-pull-up = <1>;
+			drive-strength = <19>;
 			power-source = <3300>;
 		};
 
 		mmc1-clk-pins {
-			pinmux = <K3_PADCONF(137, 0)>;	/* mmc1 clk */
-
-			bias-pull-down;
-			drive-strength = <25>;
+			pinmux = <K1_PADCONF(109, 0)>;   /* mmc1_clk */
+			bias-pull-down = <1>;
+			drive-strength = <19>;
 			power-source = <3300>;
 		};
 	};
 
 	mmc1_uhs_cfg: mmc1-uhs-cfg {
-		mmc1-uhs-data-cmd-pins {
-			pinmux = <K3_PADCONF(132, 0)>,	/* mmc1 dat3 */
-				 <K3_PADCONF(133, 0)>,	/* mmc1 dat2 */
-				 <K3_PADCONF(134, 0)>,	/* mmc1 dat1 */
-				 <K3_PADCONF(135, 0)>,	/* mmc1 dat0 */
-				 <K3_PADCONF(136, 0)>;	/* mmc1 cmd */
-
-			bias-pull-up = <0>;
-			drive-strength = <21>;
+		mmc1-data-cmd-pins {
+			pinmux = <K1_PADCONF(104, 0)>,   /* mmc1_d3 */
+				<K1_PADCONF(105, 0)>,   /* mmc1_d2 */
+				<K1_PADCONF(106, 0)>,   /* mmc1_d1 */
+				<K1_PADCONF(107, 0)>,   /* mmc1_d0 */
+				<K1_PADCONF(108, 0)>;   /* mmc1_cmd */
+			bias-pull-up = <1>;
+			drive-strength = <42>;
 			power-source = <1800>;
 		};
 
-		mmc1-uhs-clk-pins {
-			pinmux = <K3_PADCONF(137, 0)>;	/* mmc1 clk */
-
-			bias-pull-down;
-			drive-strength = <21>;
+		mmc1-clk-pins {
+			pinmux = <K1_PADCONF(109, 0)>;   /* mmc1_clk */
+			bias-pull-down = <1>;
+			drive-strength = <42>;
 			power-source = <1800>;
 		};
 	};
