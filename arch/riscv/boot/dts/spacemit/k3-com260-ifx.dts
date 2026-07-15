@@ -93,3 +93,29 @@
 &usb2_phy {
 	status = "okay";
 };
+
+&usb3b_u2phy {
+	status = "okay";
+};
+
+&usb3b {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	reset-on-resume;
+	/* wakeup-source; */
+	status = "okay";
+
+	/* VL817 USB2.0 hub (4 ports) */
+	hub_2_0: hub@1 {
+		compatible = "usb2109,2817";
+		reg = <1>;
+		peer-hub = <&hub_3_0>;
+	};
+
+	/* VL817 USB3.0 hub (4 ports) */
+	hub_3_0: hub@2 {
+		compatible = "usb2109,817";
+		reg = <2>;
+		peer-hub = <&hub_2_0>;
+	};
+};
