@@ -254,6 +254,22 @@
 	status = "okay";
 };
 
+&usb3b_u2phy {
+	status = "okay";
+};
+
+&usb3b {
+	status = "okay";
+};
+
+&usb3c_u2phy {
+	status = "okay";
+};
+
+&usb3c {
+	status = "okay";
+};
+
 &usb3d_u2phy {
 	status = "okay";
 };
