@@ -17,6 +17,14 @@
 		reg = <0x1 0x00000000 0x4 0x00000000>;
 	};
 
+	reg_aux_vcc3v3: regulator-aux-vcc3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "AUX_VCC3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
 	reg_5v_sys: regulator-5v-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "P5V0_SYS";
@@ -161,6 +169,31 @@
 				regulator-always-on;
 				regulator-boot-on;
 			};
+		};
+	};
+};
+
+&pinctrl {
+	pcie0_1_cfg {
+		pcie0-0-pins {
+			pinmux = <K3_PADCONF(79, 5)>,	/* pcie0 perst */
+				<K3_PADCONF(81, 5)>;	/* pcie0 clkreq */
+
+			bias-pull-up;			/* normal bias disable */
+			drive-strength = <38>;		/* DS8 */
+			power-source = <3300>;
+		};
+	};
+
+	pcie4_0_cfg {
+		pcie4-0-pins {
+			pinmux = <K3_PADCONF(76, 5)>,	/* pcie4 perst */
+				<K3_PADCONF(80, 5)>,	/* pcie4 wake */
+				<K3_PADCONF(78, 5)>;	/* pcie4 clkreq */
+
+			bias-pull-up;			/* normal bias disable */
+			drive-strength = <38>;		/* DS8 */
+			power-source = <3300>;
 		};
 	};
 };

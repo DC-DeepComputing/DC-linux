@@ -711,6 +711,18 @@
 		};
 	};
 
+	pcie3_0_cfg: pcie3-0-cfg  {
+		pcie3-0-pins {
+			pinmux = <K3_PADCONF(3, 4)>,	/* pcie3 perst */
+				 <K3_PADCONF(5, 4)>;	/* pcie3 clkreq */
+
+			bias-pull-up;			/* normal bias disable */
+			drive-strength = <38>;		/* DS8 */
+			power-source = <3300>;
+		};
+	};
+
+
 	pcie4_0_cfg: pcie4-0-cfg {
 		pcie4-0-pins {
 			pinmux = <K3_PADCONF(76, 5)>,	/* pcie4 perst */
