@@ -170,6 +170,14 @@ static const struct riscv_nonstd_cache_ops ccache_mgmt_ops __initconst = {
 	.inv = &ccache_flush_range,
 	.wback_inv = &ccache_flush_range,
 };
+
+static void ccache_way_enable(void)
+{
+        u32 cfg, val;
+        cfg = readl(ccache_base + SIFIVE_CCACHE_CONFIG);
+        val = FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, cfg);
+        writel(val -1 , ccache_base + SIFIVE_CCACHE_WAYENABLE);
+}
 #endif /* CONFIG_RISCV_NONSTANDARD_CACHE_OPS */
 
 static int ccache_largest_wayenabled(void)
@@ -324,6 +332,7 @@ static int __init sifive_ccache_init(void)
 		riscv_cbom_block_size = SIFIVE_CCACHE_LINE_SIZE;
 		riscv_noncoherent_supported();
 		riscv_noncoherent_register_cache_ops(&ccache_mgmt_ops);
+		ccache_way_enable();
 	}
 #endif
 
