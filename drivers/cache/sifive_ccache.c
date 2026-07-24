@@ -21,6 +21,10 @@
 #include <asm/cacheinfo.h>
 #include <asm/dma-noncoherent.h>
 #include <soc/sifive/sifive_ccache.h>
+#ifdef CONFIG_ARCH_ESWIN
+#include <linux/io.h>
+#include <linux/of_reserved_mem.h>
+#endif
 
 #define SIFIVE_CCACHE_DIRECCFIX_LOW 0x100
 #define SIFIVE_CCACHE_DIRECCFIX_HIGH 0x104
@@ -53,8 +57,13 @@
 #define SIFIVE_CCACHE_MAX_ECCINTR 4
 #define SIFIVE_CCACHE_LINE_SIZE 64
 
-static void __iomem *ccache_base;
-static int g_irq[SIFIVE_CCACHE_MAX_ECCINTR];
+enum {
+	CACHE_NODE_0 = 0,
+	CACHE_NODE_1,
+	SHARE_CACHE_NODE_NUM,
+};
+static void __iomem *ccache_base[SHARE_CACHE_NODE_NUM];
+static int g_irq[SHARE_CACHE_NODE_NUM][SIFIVE_CCACHE_MAX_ECCINTR];
 static struct riscv_cacheinfo_ops ccache_cache_ops;
 static int level;
 
@@ -70,6 +79,12 @@ enum {
 	QUIRK_BROKEN_DATA_UNCORR	= BIT(1),
 };
 
+#ifdef CONFIG_ARCH_ESWIN
+#define SIFIVE_CCACHE_WAYMASK_OFFSET 0x800
+static void __iomem *zero_device_base[SHARE_CACHE_NODE_NUM] = {NULL};
+static int zero_device_init(struct device_node *root, int nid);
+#endif
+
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *sifive_test;
 
@@ -81,7 +96,7 @@ static ssize_t ccache_write(struct file *file, const char __user *data,
 	if (kstrtouint_from_user(data, count, 0, &val))
 		return -EINVAL;
 	if ((val < 0xFF) || (val >= 0x10000 && val < 0x100FF))
-		writel(val, ccache_base + SIFIVE_CCACHE_ECCINJECTERR);
+		writel(val, ccache_base[CACHE_NODE_0] + SIFIVE_CCACHE_ECCINJECTERR);
 	else
 		return -EINVAL;
 	return count;
@@ -102,18 +117,18 @@ static void setup_sifive_debug(void)
 }
 #endif
 
-static void ccache_config_read(void)
+static void ccache_config_read(int node)
 {
 	u32 cfg;
 
-	cfg = readl(ccache_base + SIFIVE_CCACHE_CONFIG);
+	cfg = readl(ccache_base[node] + SIFIVE_CCACHE_CONFIG);
 	pr_info("%llu banks, %llu ways, sets/bank=%llu, bytes/block=%llu\n",
 		FIELD_GET(SIFIVE_CCACHE_CONFIG_BANK_MASK, cfg),
 		FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, cfg),
 		BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_SETS_MASK, cfg)),
 		BIT_ULL(FIELD_GET(SIFIVE_CCACHE_CONFIG_BLKS_MASK, cfg)));
 
-	cfg = readl(ccache_base + SIFIVE_CCACHE_WAYENABLE);
+	cfg = readl(ccache_base[node] + SIFIVE_CCACHE_WAYENABLE);
 	pr_info("Index of the largest way enabled: %u\n", cfg);
 }
 
@@ -145,6 +160,7 @@ int unregister_sifive_ccache_error_notifier(struct notifier_block *nb)
 EXPORT_SYMBOL_GPL(unregister_sifive_ccache_error_notifier);
 
 #ifdef CONFIG_RISCV_NONSTANDARD_CACHE_OPS
+#ifndef CONFIG_ARCH_ESWIN
 static void ccache_flush_range(phys_addr_t start, size_t len)
 {
 	phys_addr_t end = start + len;
@@ -170,19 +186,153 @@ static const struct riscv_nonstd_cache_ops ccache_mgmt_ops __initconst = {
 	.inv = &ccache_flush_range,
 	.wback_inv = &ccache_flush_range,
 };
+#else /* CONFIG_ARCH_ESWIN */
 
-static void ccache_way_enable(void)
+#define get_cache_base(nid) (ccache_base[nid] + SIFIVE_CCACHE_FLUSH64)
+
+#ifndef CONFIG_SOC_ESWIN_EIC7702
+
+static void eswin_ccache_flush_range(phys_addr_t paddr, size_t len)
 {
-        u32 cfg, val;
-        cfg = readl(ccache_base + SIFIVE_CCACHE_CONFIG);
-        val = FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, cfg);
-        writel(val -1 , ccache_base + SIFIVE_CCACHE_WAYENABLE);
+	phys_addr_t start, end, line;
+
+	if (!len)
+		return;
+
+	start = ALIGN_DOWN(paddr, SIFIVE_CCACHE_LINE_SIZE);
+	end = paddr + len;
+
+	mb();
+	for (line = start; line < end; line += SIFIVE_CCACHE_LINE_SIZE) {
+		writeq_cpu(line, get_cache_base(CACHE_NODE_0));
+	}
+	mb();
 }
+#else /* CONFIG_SOC_ESWIN_EIC7702 */
+
+#define DIE0_ADDR_END (CONFIG_EIC7702_DIE0_CACHED_OFFSET + \
+		       CONFIG_EIC7702_DIE0_MEM_MAX_SIZE)
+#define DIE1_ADDR_END (CONFIG_EIC7702_DIE1_CACHED_OFFSET + \
+		       CONFIG_EIC7702_DIE1_MEM_MAX_SIZE)
+#define INTERLEAVE_ADDR_END (CONFIG_EIC7702_INTERLEAVE_CACHED_OFFSET + \
+			     CONFIG_EIC7702_INTERLEAVE_MEM_MAX_SIZE)
+static __always_inline bool is_die0_addr(phys_addr_t start, phys_addr_t end)
+{
+	return start >= CONFIG_EIC7702_DIE0_CACHED_OFFSET &&
+	       end <= DIE0_ADDR_END;
+}
+static __always_inline bool is_die1_addr(phys_addr_t start, phys_addr_t end)
+{
+	return start >= CONFIG_EIC7702_DIE1_CACHED_OFFSET &&
+	       end <= DIE1_ADDR_END;
+}
+static __always_inline bool is_interleave_addr(phys_addr_t start, phys_addr_t end)
+{
+	return start >= CONFIG_EIC7702_INTERLEAVE_CACHED_OFFSET &&
+	       end <= INTERLEAVE_ADDR_END;
+}
+static __always_inline int phys_to_node(phys_addr_t start, phys_addr_t end)
+{
+	if (is_die0_addr(start, end))
+		return 0;
+
+	if (is_die1_addr(start, end))
+		return 1;
+
+	return -1;
+}
+static void eic7702_flush_range(phys_addr_t start, phys_addr_t end)
+{
+	unsigned long line;
+
+	mb();	/* sync */
+	if (is_die0_addr(start, end)) {
+		for (line = start; line < end;
+			line += SIFIVE_CCACHE_LINE_SIZE) {
+			writeq_relaxed(line, get_cache_base(CACHE_NODE_0));
+		}
+	} else if (is_die1_addr(start, end)) {
+		for (line = start; line < end;
+			line += SIFIVE_CCACHE_LINE_SIZE) {
+			writeq_relaxed(line, get_cache_base(CACHE_NODE_1));
+		}
+	} else if (is_interleave_addr(start, end)){
+		for (line = start; line < end;
+			line += SIFIVE_CCACHE_LINE_SIZE) {
+			if((!(!(line & 0x40000)))^(!(!(line & 0x100))))
+				writeq_relaxed(line, get_cache_base(CACHE_NODE_1));
+			else
+				writeq_relaxed(line, get_cache_base(CACHE_NODE_0));
+		}
+	} else {
+		WARN(1, "Sifive ccache: flush64 out of range: [0x%llx, 0x%llx], skip flush\n",
+			start, end);
+		return;
+	}
+	mb();
+}
+
+typedef struct {
+	phys_addr_t start;
+	phys_addr_t end;
+} flush_range_t;
+
+static void eic7702_flush_range_remote(void *arg)
+{
+	flush_range_t *range = arg;
+	eic7702_flush_range(range->start, range->end);
+}
+
+static __always_inline int smp_unsafe_context(void)
+{
+	/* see smp.c: smp_call_function_single, but not check cpu status here */
+	return (irqs_disabled() && !oops_in_progress) || (!in_task());
+}
+
+#define ALIGN_UP(x, align) (((x) + ((align) - 1)) & ~((align) - 1))
+static void eswin_ccache_flush_range(phys_addr_t paddr, size_t len) {
+	int node, cpu = smp_processor_id();
+	phys_addr_t start, end;
+	flush_range_t range;
+
+	if (!len)
+		return;
+
+	start = ALIGN_DOWN(paddr, SIFIVE_CCACHE_LINE_SIZE);
+	end = paddr + len;
+
+	if (smp_unsafe_context())
+		return eic7702_flush_range(start, end);
+
+	node = phys_to_node(start, end);
+	if (node == cpu_to_node(cpu))
+		return eic7702_flush_range(start, end);
+
+	if (ALIGN_UP(len, SIFIVE_CCACHE_LINE_SIZE) < PAGE_SIZE)
+		return eic7702_flush_range(start, end);
+
+	cpu = cpumask_first(cpumask_of_node(node));
+	if (unlikely(cpu >= nr_cpu_ids))
+		return eic7702_flush_range(start, end);
+
+	range.start = start;
+	range.end = end;
+	smp_call_function_single(cpu, eic7702_flush_range_remote, &range, 1);
+}
+#endif /* CONFIG_SOC_ESWIN_EIC7702 */
+
+static const struct riscv_nonstd_cache_ops ccache_mgmt_ops __initconst = {
+	.wback = &eswin_ccache_flush_range,
+	.inv = &eswin_ccache_flush_range,
+	.wback_inv = &eswin_ccache_flush_range,
+};
+#endif /* CONFIG_ARCH_ESWIN */
+
 #endif /* CONFIG_RISCV_NONSTANDARD_CACHE_OPS */
 
 static int ccache_largest_wayenabled(void)
 {
-	return readl(ccache_base + SIFIVE_CCACHE_WAYENABLE) & 0xFF;
+	return readl(ccache_base[CACHE_NODE_0] + SIFIVE_CCACHE_WAYENABLE) & 0xFF;
 }
 
 static ssize_t number_of_ways_enabled_show(struct device *dev,
@@ -216,10 +366,11 @@ static const struct attribute_group *ccache_get_priv_group(struct cacheinfo
 static irqreturn_t ccache_int_handler(int irq, void *device)
 {
 	unsigned int add_h, add_l;
+	int node = *(int *)device;
 
-	if (irq == g_irq[DIR_CORR]) {
-		add_h = readl(ccache_base + SIFIVE_CCACHE_DIRECCFIX_HIGH);
-		add_l = readl(ccache_base + SIFIVE_CCACHE_DIRECCFIX_LOW);
+	if (irq == g_irq[node][DIR_CORR]) {
+		add_h = readl(ccache_base[node] + SIFIVE_CCACHE_DIRECCFIX_HIGH);
+		add_l = readl(ccache_base[node] + SIFIVE_CCACHE_DIRECCFIX_LOW);
 		pr_err("DirError @ 0x%08X.%08X\n", add_h, add_l);
 		/* Reading this register clears the DirError interrupt sig */
 		readl(ccache_base + SIFIVE_CCACHE_DIRECCFIX_COUNT);
@@ -227,32 +378,32 @@ static irqreturn_t ccache_int_handler(int irq, void *device)
 					   SIFIVE_CCACHE_ERR_TYPE_CE,
 					   "DirECCFix");
 	}
-	if (irq == g_irq[DIR_UNCORR]) {
-		add_h = readl(ccache_base + SIFIVE_CCACHE_DIRECCFAIL_HIGH);
-		add_l = readl(ccache_base + SIFIVE_CCACHE_DIRECCFAIL_LOW);
+	if (irq == g_irq[node][DIR_UNCORR]) {
+		add_h = readl(ccache_base[node] + SIFIVE_CCACHE_DIRECCFAIL_HIGH);
+		add_l = readl(ccache_base[node] + SIFIVE_CCACHE_DIRECCFAIL_LOW);
 		/* Reading this register clears the DirFail interrupt sig */
-		readl(ccache_base + SIFIVE_CCACHE_DIRECCFAIL_COUNT);
+		readl(ccache_base[node] + SIFIVE_CCACHE_DIRECCFAIL_COUNT);
 		atomic_notifier_call_chain(&ccache_err_chain,
 					   SIFIVE_CCACHE_ERR_TYPE_UE,
 					   "DirECCFail");
 		panic("CCACHE: DirFail @ 0x%08X.%08X\n", add_h, add_l);
 	}
-	if (irq == g_irq[DATA_CORR]) {
-		add_h = readl(ccache_base + SIFIVE_CCACHE_DATECCFIX_HIGH);
-		add_l = readl(ccache_base + SIFIVE_CCACHE_DATECCFIX_LOW);
+	if (irq == g_irq[node][DATA_CORR]) {
+		add_h = readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFIX_HIGH);
+		add_l = readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFIX_LOW);
 		pr_err("DataError @ 0x%08X.%08X\n", add_h, add_l);
 		/* Reading this register clears the DataError interrupt sig */
-		readl(ccache_base + SIFIVE_CCACHE_DATECCFIX_COUNT);
+		readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFIX_COUNT);
 		atomic_notifier_call_chain(&ccache_err_chain,
 					   SIFIVE_CCACHE_ERR_TYPE_CE,
 					   "DatECCFix");
 	}
-	if (irq == g_irq[DATA_UNCORR]) {
-		add_h = readl(ccache_base + SIFIVE_CCACHE_DATECCFAIL_HIGH);
-		add_l = readl(ccache_base + SIFIVE_CCACHE_DATECCFAIL_LOW);
+	if (irq == g_irq[node][DATA_UNCORR]) {
+		add_h = readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFAIL_HIGH);
+		add_l = readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFAIL_LOW);
 		pr_err("DataFail @ 0x%08X.%08X\n", add_h, add_l);
 		/* Reading this register clears the DataFail interrupt sig */
-		readl(ccache_base + SIFIVE_CCACHE_DATECCFAIL_COUNT);
+		readl(ccache_base[node] + SIFIVE_CCACHE_DATECCFAIL_COUNT);
 		atomic_notifier_call_chain(&ccache_err_chain,
 					   SIFIVE_CCACHE_ERR_TYPE_UE,
 					   "DatECCFail");
@@ -266,6 +417,7 @@ static int sifive_ccache_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	unsigned long quirks;
 	int intr_num, rc;
+	int node = dev_to_node(dev);
 
 	quirks = (unsigned long)device_get_match_data(dev);
 
@@ -273,17 +425,20 @@ static int sifive_ccache_probe(struct platform_device *pdev)
 	if (!intr_num)
 		return dev_err_probe(dev, -ENODEV, "No interrupts property\n");
 
+	if (node < 0)
+		node = 0;
+
 	for (int i = 0; i < intr_num; i++) {
 		if (i == DATA_UNCORR && (quirks & QUIRK_BROKEN_DATA_UNCORR))
 			continue;
 
-		g_irq[i] = platform_get_irq(pdev, i);
-		if (g_irq[i] < 0)
-			return g_irq[i];
+		g_irq[node][i] = platform_get_irq(pdev, i);
+		if (g_irq[node][i] < 0)
+			return g_irq[node][i];
 
-		rc = devm_request_irq(dev, g_irq[i], ccache_int_handler, 0, "ccache_ecc", NULL);
+		rc = devm_request_irq(dev, g_irq[node][i], ccache_int_handler, 0, "ccache_ecc", &node);
 		if (rc)
-			return dev_err_probe(dev, rc, "Could not request IRQ %d\n", g_irq[i]);
+			return dev_err_probe(dev, rc, "Could not request IRQ %d\n", g_irq[node][i]);
 	}
 
 	return 0;
@@ -304,60 +459,208 @@ static int __init sifive_ccache_init(void)
 	const struct of_device_id *match;
 	unsigned long quirks __maybe_unused;
 	int rc;
-
-	np = of_find_matching_node_and_match(NULL, sifive_ccache_ids, &match);
-	if (!np)
-		return -ENODEV;
-
-	quirks = (uintptr_t)match->data;
-
-	if (of_address_to_resource(np, 0, &res)) {
-		rc = -ENODEV;
-		goto err_node_put;
-	}
-
-	ccache_base = ioremap(res.start, resource_size(&res));
-	if (!ccache_base) {
-		rc = -ENOMEM;
-		goto err_node_put;
-	}
-
-	if (of_property_read_u32(np, "cache-level", &level)) {
-		rc = -ENOENT;
-		goto err_unmap;
-	}
-
-#ifdef CONFIG_RISCV_NONSTANDARD_CACHE_OPS
-	if (quirks & QUIRK_NONSTANDARD_CACHE_OPS) {
-		riscv_cbom_block_size = SIFIVE_CCACHE_LINE_SIZE;
-		riscv_noncoherent_supported();
-		riscv_noncoherent_register_cache_ops(&ccache_mgmt_ops);
-		ccache_way_enable();
-	}
+	int i = 0;
+#ifdef CONFIG_ARCH_ESWIN
+	unsigned int config, ways;
 #endif
 
-	ccache_config_read();
+	for_each_matching_node_and_match(np, sifive_ccache_ids, &match) {
+		if (!np) {
+			rc = -ENODEV;
+			goto err_unmap;
+		}
+		quirks = (uintptr_t)match->data;
 
-	ccache_cache_ops.get_priv_group = ccache_get_priv_group;
-	riscv_set_cacheinfo_ops(&ccache_cache_ops);
+		if (of_address_to_resource(np, 0, &res)) {
+			of_node_put(np);
+			rc = -ENODEV;
+			goto err_unmap;
+		}
 
-#ifdef CONFIG_DEBUG_FS
-	setup_sifive_debug();
-#endif
+		ccache_base[i] = ioremap(res.start, resource_size(&res));
+		if (!ccache_base[i]) {
+			rc = -ENOMEM;
+			of_node_put(np);
+			goto err_unmap;
+		}
+
+		if (of_property_read_u32(np, "cache-level", &level)) {
+			rc = -ENOENT;
+			of_node_put(np);
+			goto err_unmap;
+		}
+
+	#ifdef CONFIG_ARCH_ESWIN
+		config = readl(ccache_base[i] + SIFIVE_CCACHE_CONFIG);
+		ways = FIELD_GET(SIFIVE_CCACHE_CONFIG_WAYS_MASK, config);
+		writel(ways-1, ccache_base[i] + SIFIVE_CCACHE_WAYENABLE);
+		rc = zero_device_init(np, i);
+		if (rc) {
+			of_node_put(np);
+			goto err_unmap;
+		}
+	#endif
+
+	#ifdef CONFIG_RISCV_NONSTANDARD_CACHE_OPS
+		if (quirks & QUIRK_NONSTANDARD_CACHE_OPS) {
+			riscv_cbom_block_size = SIFIVE_CCACHE_LINE_SIZE;
+			riscv_noncoherent_supported();
+			riscv_noncoherent_register_cache_ops(&ccache_mgmt_ops);
+		}
+	#endif
+
+		ccache_config_read(i);
+
+		ccache_cache_ops.get_priv_group = ccache_get_priv_group;
+		riscv_set_cacheinfo_ops(&ccache_cache_ops);
+
+		of_node_put(np);
+		i++;
+	}
 
 	rc = platform_driver_register(&sifive_ccache_driver);
 	if (rc)
 		goto err_unmap;
 
-	of_node_put(np);
-
+	#ifdef CONFIG_DEBUG_FS
+		setup_sifive_debug();
+	#endif
 	return 0;
 
 err_unmap:
-	iounmap(ccache_base);
-err_node_put:
-	of_node_put(np);
+	for (int j = 0; j < i; j++)
+		iounmap(ccache_base[j]);
+
 	return rc;
 }
 
 arch_initcall(sifive_ccache_init);
+
+#ifdef CONFIG_ARCH_ESWIN
+static const struct of_device_id zero_device_id[] = {
+	{ .compatible = "l3,zero-device"},
+	{ /* sentinel */ }
+};
+
+static int zero_device_init(struct device_node *root, int nid)
+{
+	struct device_node *child = NULL;
+	struct device_node *np;
+	const struct of_device_id *match;
+	struct resource res;
+	struct reserved_mem *rmem;
+	int len;
+	int ret = 0;
+
+	for_each_available_child_of_node(root, child) {
+		match = of_match_node(zero_device_id, child);
+		if (match) {
+			if (!of_get_property(child, "reg", &len))
+			{
+				np = of_parse_phandle(child, "memory-region", 0);
+				if (!np)
+					return -ENODEV;
+
+				rmem = of_reserved_mem_lookup(np);
+				if (!rmem)
+					return -ENODEV;
+
+				pr_info("zero_device %s: base 0x%llx, size 0x%llx\n", rmem->name, rmem->base, rmem->size);
+				zero_device_base[nid] = memremap(rmem->base, rmem->size, MEMREMAP_WB);
+				if (IS_ERR(zero_device_base[nid])) {
+					pr_err("failed to ioremap zero device\n");
+					of_node_put(child);
+					ret = PTR_ERR(zero_device_base[nid]);
+					break;
+				}
+				pr_debug("ioremp zero_device phys 0x%llx, vaddr 0x%lx\n", rmem->base, (unsigned long)zero_device_base[nid]);
+			}
+			else
+			{
+				if (of_address_to_resource(child, 0, &res)) {
+					of_node_put(child);
+					ret = -ENODEV;
+					pr_err("failed to get zero_device resource\n");
+					break;
+				}
+				pr_info("zero_device resource: start 0x%llx, size 0x%llx\n", res.start, resource_size(&res));
+				zero_device_base[nid] = ioremap(res.start, resource_size(&res));
+				if (IS_ERR(zero_device_base[nid])) {
+					pr_err("failed to ioremap zero device\n");
+					of_node_put(child);
+					ret = PTR_ERR(zero_device_base[nid]);
+					break;
+				}
+				pr_debug("ioremp zero_device phys 0x%llx, vaddr 0x%lx\n", res.start, (unsigned long)zero_device_base[nid]);
+			}
+		}
+	}
+
+	return ret;
+}
+
+#define SIFIVE_CCACHE_SETS	4096
+#define SIFIVE_CCACHE_TAG_SHIFT	(18)
+void ccache_flush_all(void *arg)
+{
+	void __iomem *zero_dev_vaddr;
+	void __iomem *waymaskN_addr;
+	struct cpumask *mask = arg;
+	int nid, wayIdx, i, cpu;
+	int hartid, masterid;
+	u64 zero_val;
+
+	cpu = smp_processor_id();
+	if (unlikely(!cpumask_test_cpu(cpu, mask))) {
+		WARN_ONCE(1, "current cpu%d not in cpumask(%*pbl)\n", cpu,
+					cpumask_pr_args(mask));
+		return;
+	}
+	hartid = cpuid_to_hartid_map(smp_processor_id());
+	if (hartid > 3) {
+		masterid = hartid - 4 + 1;
+		nid = 1;
+	} else {
+		masterid = hartid + 1;
+		nid = 0;
+	}
+
+	pr_debug("nid %d, hartid %d, masterid %d this_cpu %d flush all cache.\n",
+		 nid, hartid, masterid, cpu);
+	if (likely(NULL != zero_device_base[nid])) {
+		waymaskN_addr = ccache_base[nid] + SIFIVE_CCACHE_WAYMASK_OFFSET + (masterid << 3);
+		for (wayIdx = 0; wayIdx < 16; wayIdx++) {
+			/* write WayMaskN to allow evictions from only one way */
+			writel_cpu((1 << wayIdx), waymaskN_addr);
+			mb();
+
+			/* store all the sets in this way*/
+			zero_dev_vaddr = zero_device_base[nid] + (wayIdx << SIFIVE_CCACHE_TAG_SHIFT);
+			for (i = 0; i < SIFIVE_CCACHE_SETS; i += 8) {
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+				zero_val = readq_cpu(zero_dev_vaddr);
+				zero_dev_vaddr += SIFIVE_CCACHE_LINE_SIZE;
+			}
+			mb();
+		}
+		/* restore the wayMaskN register to the original value*/
+		writel_cpu(0xffff, waymaskN_addr);
+		mb();
+	} else {
+		pr_warn("warning: nid%d doesn't contains zero_device\n", nid);
+	}
+}
+#endif
