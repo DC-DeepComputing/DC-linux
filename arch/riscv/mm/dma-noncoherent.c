@@ -10,6 +10,9 @@
 #include <linux/mm.h>
 #include <asm/cacheflush.h>
 #include <asm/dma-noncoherent.h>
+#ifdef CONFIG_ARCH_ESWIN
+#include <soc/sifive/sifive_ccache.h>
+#endif
 
 static bool noncoherent_supported __ro_after_init;
 int dma_cache_alignment __ro_after_init = ARCH_DMA_MINALIGN;
@@ -155,3 +158,56 @@ void __init riscv_set_dma_cache_alignment(void)
 	if (!noncoherent_supported)
 		dma_cache_alignment = 1;
 }
+
+#ifdef CONFIG_ARCH_ESWIN
+#ifdef CONFIG_SOC_ESWIN_EIC7702
+static inline void _do_arch_sync_cache_all_by_hartid(int hartid) {
+	int cpuid;
+	int hardid_mask = BIT(hartid);
+	cpuid = riscv_hartid_to_cpuid(hartid);
+	smp_call_function_single(cpuid, ccache_flush_all, &hardid_mask, true);
+}
+#endif
+void _do_arch_sync_cache_all(EIC770X_LOGICAL_MEM_NODE_E nid)
+{
+	#ifdef CONFIG_SOC_ESWIN_EIC7702
+	switch (nid) {
+	case EIC770X_LOGICAL_FLAT_MEM_NODE_0:
+		_do_arch_sync_cache_all_by_hartid(0);
+		break;
+	case EIC770X_LOGICAL_FLAT_MEM_NODE_1:
+		_do_arch_sync_cache_all_by_hartid(4);
+		break;
+	case EIC770X_LOGICAL_INTERLEAVE_MEM_NODE:
+		struct cpumask cpus = {0};
+		int hartids = BIT(0) | BIT(4);
+
+		cpumask_set_cpu(riscv_hartid_to_cpuid(0), &cpus);
+		cpumask_set_cpu(riscv_hartid_to_cpuid(4), &cpus);
+		smp_call_function_many(&cpus, ccache_flush_all, &hartids, true);
+	default:
+		break;
+	}
+	#else
+	int cpuid, hartid_mask;
+
+	cpuid = smp_processor_id();
+	hartid_mask = BIT(cpuid_to_hartid_map(cpuid));
+	ccache_flush_all(&hartid_mask);
+	#endif
+}
+
+void arch_sync_cache_all(phys_addr_t phys, size_t size)
+{
+	EIC770X_LOGICAL_MEM_NODE_E nid;
+	eic770x_memory_type_t mem_type;
+
+	arch_get_mem_node_and_type(phys_to_pfn(phys), &nid, &mem_type);
+	if (nid == EIC770X_LOGICAL_SPRAM_NODE_0 ||
+		nid == EIC770X_LOGICAL_SPRAM_NODE_1)
+		return;
+
+	_do_arch_sync_cache_all(nid);
+}
+EXPORT_SYMBOL(arch_sync_cache_all);
+#endif
