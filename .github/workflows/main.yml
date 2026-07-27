@@ -25,16 +25,20 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout k3-master
+        uses: actions/checkout@v4
+        with:
+          ref: dc-master
+          path: dc-linux
       # Runs a set of commands using the runners shell
       - name: build-linux
         id: build-linux
         run: |
           sudo docker ps   
           pwd
-          sudo docker run --rm --name build-linux-$GITHUB_RUN_ID --privileged=true -v /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux:/home  main-linux:v2 /bin/bash -c "cd /home && export ARCH=riscv && export INSTALL_MOD_PATH=/home && export CROSS_COMPILE=/usr/bin/riscv64-linux-gnu- && make defconfig && make -j$(nproc) && make modules_install"
-          sudo chown -R gitlab-runner:gitlab-runner /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux  
-          sudo chmod -R 755 /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux
+          sudo docker run --rm --name build-linux-$GITHUB_RUN_ID --privileged=true -v /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux:/home  main-linux:v2 /bin/bash -c "cd /home && export ARCH=riscv && export INSTALL_MOD_PATH=/home && export CROSS_COMPILE=/usr/bin/riscv64-linux-gnu- && make defconfig && make -j$(nproc) && make modules_install"
+          sudo chown -R gitlab-runner:gitlab-runner /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux 
+          sudo chmod -R 755 /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux
       - name: send-mail
         if: ${{ failure() && steps.build-linux.conclusion == 'failure' }}
         # if: ${{ success() && steps.build-linux.conclusion == 'success' }}
@@ -48,10 +52,10 @@ jobs:
         env: 
              passd: ${{ secrets.SEND_MAIL }}
         run: |
-          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/lib 
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/lib 
           zip -r -y modules.zip  modules
           curl -uadmin:${{secrets.ADMIN_PASS}} -T  modules.zip ${{secrets.JFROG_PATH}}/modules.zip
-          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/arch/riscv
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/arch/riscv
           zip -r -y boot.zip boot
           curl -uadmin:${{secrets.ADMIN_PASS}} -T  boot.zip ${{secrets.JFROG_PATH}}/boot.zip
 
