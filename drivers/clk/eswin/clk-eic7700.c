@@ -127,7 +127,8 @@
 #define EIC7700_REG_OFFSET_I2C1			0x214
 
 #define EIC7700_NR_CLKS				(EIC7700_CLK_GATE_NOC_WDREF + 1)
-
+/* external clocks */
+#define EIC7700_XTAL_24M			(EIC7700_NR_CLKS + 1)
 /*
  * The 24 MHz oscillator, the root of most of the clock tree.
  */
@@ -136,7 +137,7 @@ static const struct clk_parent_data xtal24M[] = {
 };
 
 /* fixed rate clocks */
-static struct eswin_fixed_rate_clock eic7700_fixed_rate_clks[] = {
+static const struct eswin_fixed_rate_clock eic7700_fixed_rate_clks[] = {
 	ESWIN_FIXED(EIC7700_CLK_XTAL_32K, "fixed_rate_clk_xtal_32k", 0, 32768),
 	ESWIN_FIXED(EIC7700_CLK_SPLL0_FOUT1, "fixed_rate_clk_spll0_fout1", 0,
 		    1600000000),
@@ -185,7 +186,7 @@ static struct eswin_pll_clock eic7700_pll_clks[] = {
 };
 
 /* fixed factor clocks */
-static struct eswin_fixed_factor_clock eic7700_factor_clks[] = {
+static const struct eswin_fixed_factor_clock eic7700_factor_clks[] = {
 	ESWIN_FACTOR(EIC7700_CLK_FIXED_FACTOR_CLK_1M_DIV24,
 		     "fixed_factor_clk_1m_div24", xtal24M, 1, 24, 0),
 	ESWIN_FACTOR(EIC7700_CLK_FIXED_FACTOR_PVT_DIV20,
@@ -193,7 +194,7 @@ static struct eswin_fixed_factor_clock eic7700_factor_clks[] = {
 };
 
 /* divider clocks */
-static struct eswin_divider_clock eic7700_div_clks[] = {
+static const struct eswin_divider_clock eic7700_div_clks[] = {
 	ESWIN_DIV(EIC7700_CLK_DIV_U84_RTC_TOGGLE_DYNM,
 		  "divider_u84_rtc_toggle_dynm", xtal24M, 0,
 		  EIC7700_REG_OFFSET_RTC, 16, 5,
@@ -204,7 +205,7 @@ static struct eswin_divider_clock eic7700_div_clks[] = {
 };
 
 /* gate clocks */
-static struct eswin_gate_clock eic7700_gate_clks[] = {
+static const struct eswin_gate_clock eic7700_gate_clks[] = {
 	ESWIN_GATE(EIC7700_CLK_GATE_GPU_GRAY_CLK, "gate_gpu_gray_clk", xtal24M,
 		   CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_GPU_GRAY, 31, 0),
 	ESWIN_GATE(EIC7700_CLK_GATE_VI_PHY_CFG, "gate_vi_phy_cfg", xtal24M,
@@ -267,146 +268,151 @@ static struct eswin_clk_info eic7700_early_clks[] = {
 			  EIC7700_CLK_GATE_SPLL0_FOUT2, 1, 2, 0),
 };
 
-static const struct clk_parent_data dsp_aclk_root_2mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int dsp_aclk_root_2mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL2_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data d2d_aclk_root_2mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int d2d_aclk_root_2mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL2_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data ddr_aclk_root_2mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int ddr_aclk_root_2mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL2_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data mshcore_root_3mux1_0_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[3].hw },
-	{ .hw = &eic7700_fixed_rate_clks[9].hw },
+static const unsigned int mshcore_root_3mux1_0_mux_p[] = {
+	EIC7700_CLK_SPLL0_FOUT3,
+	EIC7700_CLK_SPLL2_FOUT3,
 };
 
-static const struct clk_parent_data mshcore_root_3mux1_1_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[3].hw },
-	{ .hw = &eic7700_fixed_rate_clks[9].hw },
+static const unsigned int mshcore_root_3mux1_1_mux_p[] = {
+	EIC7700_CLK_SPLL0_FOUT3,
+	EIC7700_CLK_SPLL2_FOUT3,
 };
 
-static const struct clk_parent_data mshcore_root_3mux1_2_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[3].hw },
-	{ .hw = &eic7700_fixed_rate_clks[9].hw },
+static const unsigned int mshcore_root_3mux1_2_mux_p[] = {
+	EIC7700_CLK_SPLL0_FOUT3,
+	EIC7700_CLK_SPLL2_FOUT3,
 };
 
-static const struct clk_parent_data npu_core_3mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[4].hw },
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[8].hw },
+static const unsigned int npu_core_3mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL1_FOUT1,
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT2,
 };
 
-static const struct clk_parent_data npu_e31_3mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[4].hw },
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[8].hw },
+static const unsigned int npu_e31_3mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL1_FOUT1,
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT2,
 };
 
-static const struct clk_parent_data vi_aclk_root_2mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
+static const unsigned int vi_aclk_root_2mux1_gfree_mux_p[] = {
+	EIC7700_CLK_SPLL0_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT1,
 };
 
-static const struct clk_parent_data mux_vi_dw_root_2mux1_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int mux_vi_dw_root_2mux1_p[] = {
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data mux_vi_dvp_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int mux_vi_dvp_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data mux_vi_dig_isp_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
+static const unsigned int mux_vi_dig_isp_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL0_FOUT1,
 };
 
-static const struct clk_parent_data mux_vo_aclk_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
+static const unsigned int mux_vo_aclk_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_SPLL0_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT1,
 };
 
-static const struct clk_parent_data mux_vo_pixel_root_2mux1_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
-	{ .hw = &eic7700_fixed_rate_clks[8].hw },
+static const unsigned int mux_vo_pixel_root_2mux1_p[] = {
+	EIC7700_CLK_VPLL_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT2,
 };
 
-static const struct clk_parent_data mux_vcdec_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
+static const unsigned int mux_vcdec_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_SPLL0_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT1,
 };
 
-static const struct clk_parent_data mux_vcaclk_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[1].hw },
-	{ .hw = &eic7700_fixed_rate_clks[7].hw },
+static const unsigned int mux_vcaclk_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_SPLL0_FOUT1,
+	EIC7700_CLK_SPLL2_FOUT1,
 };
 
-static const struct clk_parent_data npu_llclk_3mux1_gfree_mux_p[] = {
-	{ .hw = &eic7700_early_clks[1].hw },
-	{ .hw = &eic7700_early_clks[2].hw },
-	{ .hw = &eic7700_fixed_rate_clks[10].hw },
+static const unsigned int npu_llclk_3mux1_gfree_mux_p[] = {
+	EIC7700_CLK_DIV_NPU_LLC_SRC0_DYNM,
+	EIC7700_CLK_DIV_NPU_LLC_SRC1_DYNM,
+	EIC7700_CLK_VPLL_FOUT1,
 };
 
-static const struct clk_parent_data mux_bootspi_clk_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_early_clks[4].hw },
-	{ .index = 0 },
+static const unsigned int mux_bootspi_clk_2mux1_gfree_p[] = {
+	EIC7700_CLK_DIV_BOOTSPI_DYNM,
+	EIC7700_XTAL_24M,
 };
 
-static const struct clk_parent_data mux_scpu_core_clk_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_early_clks[5].hw },
-	{ .index = 0 },
+static const unsigned int mux_scpu_core_clk_2mux1_gfree_p[] = {
+	EIC7700_CLK_DIV_SCPU_CORE_DYNM,
+	EIC7700_XTAL_24M,
 };
 
-static const struct clk_parent_data mux_lpcpu_core_clk_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_early_clks[6].hw },
-	{ .index = 0 },
+static const unsigned int mux_lpcpu_core_clk_2mux1_gfree_p[] = {
+	EIC7700_CLK_DIV_LPCPU_CORE_DYNM,
+	EIC7700_XTAL_24M,
 };
 
-static const struct clk_parent_data mux_vo_mclk_2mux_ext_mclk_p[] = {
-	{ .hw = &eic7700_early_clks[7].hw },
-	{ .hw = &eic7700_fixed_rate_clks[15].hw },
+static const unsigned int mux_vo_mclk_2mux_ext_mclk_p[] = {
+	EIC7700_CLK_DIV_VO_MCLK_DYNM,
+	EIC7700_CLK_EXT_MCLK,
 };
 
-static const struct clk_parent_data mux_aondma_axi2mux1_gfree_p[] = {
-	{ .hw = &eic7700_early_clks[8].hw },
-	{ .index = 0 },
+static const unsigned int mux_aondma_axi2mux1_gfree_p[] = {
+	EIC7700_CLK_DIV_AONDMA_AXI_DYNM,
+	EIC7700_XTAL_24M,
 };
 
-static const struct clk_parent_data mux_rmii_ref_2mux1_p[] = {
-	{ .hw = &eic7700_early_clks[0].hw },
-	{ .hw = &eic7700_fixed_rate_clks[16].hw },
+static const unsigned int mux_rmii_ref_2mux1_p[] = {
+	EIC7700_CLK_FIXED_FACTOR_HSP_RMII_REF_DIV6,
+	EIC7700_CLK_LPDDR_REF_BAK,
 };
 
-static const struct clk_parent_data mux_eth_core_2mux1_p[] = {
-	{ .hw = &eic7700_fixed_rate_clks[6].hw },
-	{ .hw = &eic7700_fixed_rate_clks[16].hw },
+static const unsigned int mux_eth_core_2mux1_p[] = {
+	EIC7700_CLK_SPLL1_FOUT3,
+	EIC7700_CLK_LPDDR_REF_BAK,
 };
 
-static const struct clk_parent_data mux_sata_phy_2mux1_p[] = {
-	{ .hw = &eic7700_early_clks[9].hw },
-	{ .hw = &eic7700_fixed_rate_clks[16].hw },
+static const unsigned int mux_sata_phy_2mux1_p[] = {
+	EIC7700_CLK_DIV_SATA_PHY_REF_DYNM,
+	EIC7700_CLK_LPDDR_REF_BAK,
 };
 
-static const struct clk_parent_data mux_syscfg_clk_root_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_early_clks[10].hw },
-	{ .index = 0 },
+static const unsigned int mux_syscfg_clk_root_2mux1_gfree_p[] = {
+	EIC7700_CLK_DIV_SYS_CFG_DYNM,
+	EIC7700_XTAL_24M,
 };
 
-static const struct clk_parent_data mux_cpu_root_3mux1_gfree_p[] = {
-	{ .hw = &eic7700_pll_clks[1].hw },
-	{ .hw = &eic7700_early_clks[11].hw },
-	{ .index = 0 },
+static const unsigned int mux_cpu_root_3mux1_gfree_p[] = {
+	EIC7700_CLK_PLL_CPU,
+	EIC7700_CLK_FIXED_FACTOR_U84_CORE_LP_DIV2,
+	EIC7700_XTAL_24M,
 };
 
-static struct eswin_mux_clock eic7700_mux_clks[] = {
+static const unsigned int mux_cpu_aclk_2mux1_gfree_p[] = {
+	EIC7700_CLK_MUX_RMII_REF_2MUX,
+	EIC7700_CLK_MUX_CPU_ROOT_3MUX1_GFREE,
+};
+
+static const struct eswin_mux_clock eic7700_mux_clks[] = {
 	ESWIN_MUX(EIC7700_CLK_MUX_CPU_ROOT_3MUX1_GFREE,
 		  "mux_cpu_root_3mux1_gfree", mux_cpu_root_3mux1_gfree_p,
 		  ARRAY_SIZE(mux_cpu_root_3mux1_gfree_p),
@@ -544,19 +550,14 @@ static struct eswin_mux_clock eic7700_mux_clks[] = {
 		  mux_sata_phy_2mux1_p, ARRAY_SIZE(mux_sata_phy_2mux1_p),
 		  CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_SATA_OOB, 9, 1,
 		  CLK_MUX_ROUND_CLOSEST),
-};
-
-static const struct clk_parent_data mux_cpu_aclk_2mux1_gfree_p[] = {
-	{ .hw = &eic7700_mux_clks[1].hw },
-	{ .hw = &eic7700_mux_clks[0].hw },
+	ESWIN_MUX(EIC7700_CLK_MUX_CPU_ACLK_2MUX1_GFREE,
+		  "mux_cpu_aclk_2mux1_gfree", mux_cpu_aclk_2mux1_gfree_p,
+		  ARRAY_SIZE(mux_cpu_aclk_2mux1_gfree_p),
+		  CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_U84, 20, 1,
+		  CLK_MUX_ROUND_CLOSEST),
 };
 
 static struct eswin_clk_info eic7700_clks[] = {
-	ESWIN_MUX_TYPE(EIC7700_CLK_MUX_CPU_ACLK_2MUX1_GFREE,
-		       "mux_cpu_aclk_2mux1_gfree", mux_cpu_aclk_2mux1_gfree_p,
-		       ARRAY_SIZE(mux_cpu_aclk_2mux1_gfree_p),
-		       CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_U84, 20, 1,
-		       CLK_MUX_ROUND_CLOSEST, NULL),
 	ESWIN_GATE_TYPE(EIC7700_CLK_GATE_CPU_TRACE_COM_CLK,
 			"gate_clk_cpu_trace_com_clk",
 			EIC7700_CLK_MUX_CPU_ACLK_2MUX1_GFREE,
@@ -827,11 +828,13 @@ static struct eswin_clk_info eic7700_clks[] = {
 			EIC7700_CLK_MUX_SYSCFG_CLK_ROOT_2MUX1_GFREE,
 			CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_DSP_CFG, 31, 0),
 	ESWIN_GATE_TYPE(EIC7700_CLK_GATE_D2D_ACLK, "gate_d2d_aclk",
-			EIC7700_CLK_DIV_D2D_ACLK_DYNM, CLK_SET_RATE_PARENT,
+			EIC7700_CLK_DIV_D2D_ACLK_DYNM,
+			CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			EIC7700_REG_OFFSET_D2D_ACLK, 31, 0),
 	ESWIN_GATE_TYPE(EIC7700_CLK_GATE_D2D_CFG_CLK, "gate_d2d_cfg_clk",
 			EIC7700_CLK_MUX_SYSCFG_CLK_ROOT_2MUX1_GFREE,
-			CLK_SET_RATE_PARENT, EIC7700_REG_OFFSET_D2D_CFG, 31, 0),
+			CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
+			EIC7700_REG_OFFSET_D2D_CFG, 31, 0),
 	ESWIN_GATE_TYPE(EIC7700_CLK_GATE_TCU_ACLK, "gate_tcu_aclk",
 			EIC7700_CLK_DIV_DDR_ACLK_DYNM, CLK_SET_RATE_PARENT,
 			EIC7700_REG_OFFSET_TCU_ACLK, 31, 0),
@@ -1266,8 +1269,8 @@ static int eic7700_clk_pll_cpu_notifier_cb(struct notifier_block *nb,
 
 	pdata = container_of(nb, struct eswin_clock_data, pll_nb);
 
-	mux_clk = &eic7700_mux_clks[0].hw;
-	lp_clk = &eic7700_early_clks[11].hw;
+	mux_clk = pdata->clk_data.hws[EIC7700_CLK_MUX_CPU_ROOT_3MUX1_GFREE];
+	lp_clk = pdata->clk_data.hws[EIC7700_CLK_FIXED_FACTOR_U84_CORE_LP_DIV2];
 
 	if (action == PRE_RATE_CHANGE) {
 		pdata->original_clk = clk_hw_get_parent(mux_clk);
@@ -1280,7 +1283,7 @@ static int eic7700_clk_pll_cpu_notifier_cb(struct notifier_block *nb,
 }
 
 static int eic7700_clk_probe(struct platform_device *pdev)
-{
+{	const struct eswin_die_data *die_data;
 	struct eswin_clock_data *clk_data;
 	struct device *dev = &pdev->dev;
 	struct clk *pll_clk;
@@ -1290,6 +1293,12 @@ static int eic7700_clk_probe(struct platform_device *pdev)
 	if (IS_ERR(clk_data))
 		return dev_err_probe(dev, PTR_ERR(clk_data),
 				     "failed to get clk data!\n");
+
+	die_data = device_get_match_data(&pdev->dev);
+	if (!die_data)
+		return -ENODEV;
+
+	clk_data->die_data = die_data;
 
 	ret = eswin_clk_register_fixed_rate(dev, eic7700_fixed_rate_clks,
 					    ARRAY_SIZE(eic7700_fixed_rate_clks),
@@ -1305,7 +1314,8 @@ static int eic7700_clk_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, ret,
 				     "failed to register pll clock\n");
 
-	pll_clk = devm_clk_hw_get_clk(dev, &eic7700_pll_clks[1].hw,
+	pll_clk = devm_clk_hw_get_clk(dev,
+				      clk_data->clk_data.hws[EIC7700_CLK_PLL_CPU],
 				      "clk_pll_cpu");
 	if (IS_ERR(pll_clk))
 		return dev_err_probe(dev, PTR_ERR(pll_clk),
@@ -1356,8 +1366,17 @@ static int eic7700_clk_probe(struct platform_device *pdev)
 					   &clk_data->clk_data);
 }
 
+static const struct eswin_die_data eic7700_die0_data = {
+	.die_id = 0,
+};
+
+static const struct eswin_die_data eic7700_die1_data = {
+	.die_id = 1,
+};
+
 static const struct of_device_id eic7700_clock_dt_ids[] = {
-	{ .compatible = "eswin,eic7700-clock", },
+	{ .compatible = "eswin,eic7700-clock", .data = &eic7700_die0_data },
+	{ .compatible = "eswin,eic7700-clock-d1", .data = &eic7700_die1_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, eic7700_clock_dt_ids);
