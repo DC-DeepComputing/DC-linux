@@ -96,7 +96,8 @@ static int eic7700_hsp_reset_probe(struct auxiliary_device *adev,
 }
 
 static const struct auxiliary_device_id eic7700_hsp_reset_ids[] = {
-	{ .name = "clk_eic7700_hsp.hsp-reset", },
+	{ .name = "clk_eic7700_hsp.d0-hsp-reset", },
+	{ .name = "clk_eic7700_hsp.d1-hsp-reset", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(auxiliary, eic7700_hsp_reset_ids);
