@@ -37,7 +37,7 @@ struct eswin_clock_data *eswin_clk_init(struct platform_device *pdev,
 
 	eclk_data->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(eclk_data->base))
-		return ERR_PTR(-EINVAL);
+		return ERR_CAST(eclk_data->base);
 
 	eclk_data->clk_data.num = nr_clks;
 	spin_lock_init(&eclk_data->lock);
@@ -173,20 +173,23 @@ static int clk_pll_determine_rate(struct clk_hw *hw,
 }
 
 int eswin_clk_register_fixed_rate(struct device *dev,
-				  struct eswin_fixed_rate_clock *clks,
+				  const struct eswin_fixed_rate_clock *clks,
 				  int nums, struct eswin_clock_data *data)
 {
 	struct clk_hw *clk_hw;
+	char *name;
 	int i;
 
 	for (i = 0; i < nums; i++) {
-		clk_hw = devm_clk_hw_register_fixed_rate(dev, clks[i].name,
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
+
+		clk_hw = devm_clk_hw_register_fixed_rate(dev, name,
 							 NULL, clks[i].flags,
 							 clks[i].rate);
 		if (IS_ERR(clk_hw))
 			return PTR_ERR(clk_hw);
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 	}
 
@@ -206,6 +209,7 @@ int eswin_clk_register_pll(struct device *dev, struct eswin_pll_clock *clks,
 	struct eswin_clk_pll *p_clk = NULL;
 	struct clk_init_data init;
 	struct clk_hw *clk_hw;
+	char *name;
 	int i, ret;
 
 	p_clk = devm_kzalloc(dev, sizeof(*p_clk) * nums, GFP_KERNEL);
@@ -213,6 +217,8 @@ int eswin_clk_register_pll(struct device *dev, struct eswin_pll_clock *clks,
 		return -ENOMEM;
 
 	for (i = 0; i < nums; i++) {
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
 		p_clk->id = clks[i].id;
 		p_clk->ctrl_reg0 = data->base + clks[i].ctrl_reg0;
 		p_clk->fbdiv_shift = clks[i].fbdiv_shift;
@@ -229,7 +235,7 @@ int eswin_clk_register_pll(struct device *dev, struct eswin_pll_clock *clks,
 		p_clk->max_rate = clks[i].max_rate;
 		p_clk->min_rate = clks[i].min_rate;
 
-		init.name = clks[i].name;
+		init.name = name;
 		init.flags = 0;
 		init.parent_data = clks[i].parent_data;
 		init.num_parents = 1;
@@ -242,7 +248,6 @@ int eswin_clk_register_pll(struct device *dev, struct eswin_pll_clock *clks,
 		if (ret)
 			return ret;
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 		p_clk++;
 	}
@@ -252,14 +257,18 @@ int eswin_clk_register_pll(struct device *dev, struct eswin_pll_clock *clks,
 EXPORT_SYMBOL_GPL(eswin_clk_register_pll);
 
 int eswin_clk_register_fixed_factor(struct device *dev,
-				    struct eswin_fixed_factor_clock *clks,
+				    const struct eswin_fixed_factor_clock *clks,
 				    int nums, struct eswin_clock_data *data)
 {
 	struct clk_hw *clk_hw;
+	char *name;
 	int i;
 
 	for (i = 0; i < nums; i++) {
-		clk_hw = devm_clk_hw_register_fixed_factor_index(dev, clks[i].name,
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
+
+		clk_hw = devm_clk_hw_register_fixed_factor_index(dev, name,
 								 clks[i].parent_data->index,
 								 clks[i].flags, clks[i].mult,
 								 clks[i].div);
@@ -267,7 +276,6 @@ int eswin_clk_register_fixed_factor(struct device *dev,
 		if (IS_ERR(clk_hw))
 			return PTR_ERR(clk_hw);
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 	}
 
@@ -275,15 +283,29 @@ int eswin_clk_register_fixed_factor(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(eswin_clk_register_fixed_factor);
 
-int eswin_clk_register_mux(struct device *dev, struct eswin_mux_clock *clks,
+int eswin_clk_register_mux(struct device *dev, const struct eswin_mux_clock *clks,
 			   int nums, struct eswin_clock_data *data)
 {
+	struct clk_parent_data parents_data[3] = { };
 	struct clk_hw *clk_hw;
+	char *name;
 	int i;
+	int j;
 
 	for (i = 0; i < nums; i++) {
-		clk_hw = devm_clk_hw_register_mux_parent_data_table(dev, clks[i].name,
-								    clks[i].parent_data,
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
+
+		for (j = 0; j < clks[i].num_parents; j++) {
+			unsigned int parent_id = clks[i].parent_ids[j];
+			if (parent_id > data->clk_data.num)
+				parents_data[j].index = 0;
+			else
+				parents_data[j].hw = data->clk_data.hws[parent_id];
+		}
+
+		clk_hw = devm_clk_hw_register_mux_parent_data_table(dev, name,
+								    parents_data,
 								    clks[i].num_parents,
 								    clks[i].flags,
 								    data->base + clks[i].reg,
@@ -294,7 +316,6 @@ int eswin_clk_register_mux(struct device *dev, struct eswin_mux_clock *clks,
 		if (IS_ERR(clk_hw))
 			return PTR_ERR(clk_hw);
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 	}
 
@@ -456,14 +477,18 @@ struct clk_hw *eswin_register_clkdiv(struct device *dev, unsigned int id,
 EXPORT_SYMBOL_GPL(eswin_register_clkdiv);
 
 int eswin_clk_register_divider(struct device *dev,
-			       struct eswin_divider_clock *clks,
+			       const struct eswin_divider_clock *clks,
 			       int nums, struct eswin_clock_data *data)
 {
 	struct clk_hw *clk_hw;
+	char *name;
 	int i;
 
 	for (i = 0; i < nums; i++) {
-		clk_hw = devm_clk_hw_register_divider_parent_data(dev, clks[i].name,
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
+
+		clk_hw = devm_clk_hw_register_divider_parent_data(dev, name,
 								  clks[i].parent_data,
 								  clks[i].flags,
 								  data->base + clks[i].reg,
@@ -473,7 +498,6 @@ int eswin_clk_register_divider(struct device *dev,
 		if (IS_ERR(clk_hw))
 			return PTR_ERR(clk_hw);
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 	}
 
@@ -481,14 +505,18 @@ int eswin_clk_register_divider(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(eswin_clk_register_divider);
 
-int eswin_clk_register_gate(struct device *dev, struct eswin_gate_clock *clks,
+int eswin_clk_register_gate(struct device *dev, const struct eswin_gate_clock *clks,
 			    int nums, struct eswin_clock_data *data)
 {
 	struct clk_hw *clk_hw;
+	char *name;
 	int i;
 
 	for (i = 0; i < nums; i++) {
-		clk_hw = devm_clk_hw_register_gate_parent_data(dev, clks[i].name,
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, clks[i].name);
+
+		clk_hw = devm_clk_hw_register_gate_parent_data(dev, name,
 							       clks[i].parent_data,
 							       clks[i].flags,
 							       data->base + clks[i].reg,
@@ -498,7 +526,6 @@ int eswin_clk_register_gate(struct device *dev, struct eswin_gate_clock *clks,
 		if (IS_ERR(clk_hw))
 			return PTR_ERR(clk_hw);
 
-		clks[i].hw = *clk_hw;
 		data->clk_data.hws[clks[i].id] = clk_hw;
 	}
 
@@ -512,6 +539,7 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 	struct eswin_clk_info *info;
 	const struct clk_hw *phw = NULL;
 	struct clk_hw *hw;
+	char *name = NULL;
 	int i;
 
 	for (i = 0; i < nums; i++) {
@@ -522,7 +550,10 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 
 			factor = &info->data.factor;
 			phw = data->clk_data.hws[info->pid];
-			hw = devm_clk_hw_register_fixed_factor_parent_hw(dev, factor->name, phw,
+			name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+					      data->die_data->die_id, factor->name);
+
+			hw = devm_clk_hw_register_fixed_factor_parent_hw(dev, name, phw,
 									 factor->flags,
 									 factor->mult,
 									 factor->div);
@@ -530,9 +561,29 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 		}
 		case CLK_MUX: {
 			const struct eswin_mux_clock *mux = &info->data.mux;
+			struct clk_parent_data parents_data[3] = { };
 
-			hw = devm_clk_hw_register_mux_parent_data_table(dev, mux->name,
-									mux->parent_data,
+			name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+					      data->die_data->die_id, mux->name);
+
+			for (int j = 0; j < mux->num_parents; j++) {
+				unsigned int parent_id = mux->parent_ids[j];
+				if (parent_id > data->clk_data.num) {
+					if (parent_id - data->clk_data.num == 1)
+						parents_data[j].index = 0;
+					else if (parent_id - data->clk_data.num == 2)
+						parents_data[j].index = 1;
+					else if (parent_id - data->clk_data.num == 3)
+						parents_data[j].index = 2;
+					else
+						dev_err(dev, "not support the parent:%u\n",
+							parent_id);
+				} else {
+					parents_data[j].hw = data->clk_data.hws[parent_id];
+				}
+			}
+			hw = devm_clk_hw_register_mux_parent_data_table(dev, name,
+									parents_data,
 									mux->num_parents,
 									mux->flags,
 									data->base + mux->reg,
@@ -544,9 +595,12 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 		case CLK_DIVIDER: {
 			const struct eswin_divider_clock *div = &info->data.div;
 
+			name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+						data->die_data->die_id, div->name);
+
 			phw = data->clk_data.hws[info->pid];
 			if (div->priv_flag)
-				hw = eswin_register_clkdiv(dev, div->id, div->name, phw,
+				hw = eswin_register_clkdiv(dev, div->id, name, phw,
 							   div->flags, data->base + div->reg,
 							   div->shift, div->width, div->div_flags,
 							   div->priv_flag, &data->lock);
@@ -562,8 +616,11 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 		case CLK_GATE: {
 			const struct eswin_gate_clock *gate = &info->data.gate;
 
+			name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+						data->die_data->die_id, gate->name);
+
 			phw = data->clk_data.hws[info->pid];
-			hw = devm_clk_hw_register_gate_parent_hw(dev, gate->name, phw,
+			hw = devm_clk_hw_register_gate_parent_hw(dev, name, phw,
 								 gate->flags,
 								 data->base + gate->reg,
 								 gate->bit_idx, gate->gate_flags,
@@ -577,7 +634,6 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 		if (IS_ERR(hw))
 			return PTR_ERR(hw);
 
-		info->hw = *hw;
 		data->clk_data.hws[info->id] = hw;
 	}
 
