@@ -28,6 +28,10 @@
 
 #define USB_REF_XTAL24M			0x2a
 #define EIC7700_HSP_NR_CLKS		(EIC7700_HSP_CLK_GATE_SATA + 1)
+/* external clocks */
+#define EIC7700_HSP_CFG			(EIC7700_HSP_NR_CLKS + 1)
+#define EIC7700_HSP_MMC			(EIC7700_HSP_NR_CLKS + 2)
+#define EIC7700_HSP_SATA		(EIC7700_HSP_NR_CLKS + 3)
 
 struct eic7700_hsp_clk_gate {
 	struct clk_hw hw;
@@ -165,7 +169,7 @@ static const struct clk_parent_data hsp_usb_sata[] = {
 	{ .index = 2 }
 };
 
-static struct eswin_fixed_factor_clock eic7700_hsp_factor_clks[] = {
+static const struct eswin_fixed_factor_clock eic7700_hsp_factor_clks[] = {
 	ESWIN_FACTOR(EIC7700_HSP_CLK_FAC_CFG_DIV2, "factor_hsp_cfg_div2",
 		     hsp_cfg, 1, 2, 0),
 	ESWIN_FACTOR(EIC7700_HSP_CLK_FAC_CFG_DIV4, "factor_hsp_cfg_div4",
@@ -174,22 +178,18 @@ static struct eswin_fixed_factor_clock eic7700_hsp_factor_clks[] = {
 		     hsp_mmc, 1, 10, 0),
 };
 
-static struct eswin_gate_clock eic7700_hsp_gate_clks[] = {
+static const struct eswin_gate_clock eic7700_hsp_gate_clks[] = {
 	ESWIN_GATE(EIC7700_HSP_CLK_GATE_SATA, "gate_clk_hsp_sata", hsp_usb_sata,
-		   CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
-		   EIC7700_HSP_SATA_REG, 28, 0),
+		   CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, EIC7700_HSP_SATA_REG, 28, 0),
 	ESWIN_GATE(EIC7700_HSP_CLK_GATE_MSHC0_TMR, "gate_clk_hsp_mshc0_tmr",
-		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
-		   EIC7700_HSP_MSHC0_REG, 8, 0),
+		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, EIC7700_HSP_MSHC0_REG, 8, 0),
 	ESWIN_GATE(EIC7700_HSP_CLK_GATE_MSHC1_TMR, "gate_clk_hsp_mshc1_tmr",
-		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
-		   EIC7700_HSP_MSHC1_REG, 8, 0),
+		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, EIC7700_HSP_MSHC1_REG, 8, 0),
 	ESWIN_GATE(EIC7700_HSP_CLK_GATE_MSHC2_TMR, "gate_clk_hsp_mshc2_tmr",
-		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
-		   EIC7700_HSP_MSHC2_REG, 8, 0),
+		   hsp_mmc, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED, EIC7700_HSP_MSHC2_REG, 8, 0),
 };
 
-static struct eic7700_hsp_clk_gate eic7700_hsp_spec_gate_clks[] = {
+static const struct eic7700_hsp_clk_gate eic7700_hsp_spec_gate_clks[] = {
 	EIC7700_HSP_GATE(EIC7700_HSP_CLK_GATE_USB0, "gate_clk_hsp_usb0",
 			 hsp_usb_sata, CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			 EIC7700_HSP_USB0_REG, 28, EIC7700_HSP_USB0_REF_REG),
@@ -198,44 +198,41 @@ static struct eic7700_hsp_clk_gate eic7700_hsp_spec_gate_clks[] = {
 			 EIC7700_HSP_USB1_REG, 28, EIC7700_HSP_USB1_REF_REG),
 };
 
-static const struct clk_parent_data mux_mmc_3mux1_p[] = {
-	{ .fw_name = "cfg" },
-	{ .hw = &eic7700_hsp_factor_clks[0].hw },
-	{ .hw = &eic7700_hsp_factor_clks[1].hw },
+static const unsigned int mux_mmc_3mux1_p[] = {
+	EIC7700_HSP_CFG,
+	EIC7700_HSP_CLK_FAC_CFG_DIV2,
+	EIC7700_HSP_CLK_FAC_CFG_DIV4,
 };
 
-static const struct clk_parent_data mux_mmc_2mux1_p[] = {
-	{ .fw_name = "mmc" },
-	{ .hw = &eic7700_hsp_factor_clks[2].hw },
+static const unsigned int mux_mmc_2mux1_p[] = {
+	EIC7700_HSP_MMC,
+	EIC7700_HSP_CLK_FAC_MMC_DIV10,
 };
 
 static u32 mux_mmc_3mux1_tbl[] = { 0x0, 0x1, 0x3 };
 
-static struct eswin_mux_clock eic7700_hsp_mux_clks[] = {
-	ESWIN_MUX_TBL(EIC7700_HSP_CLK_MUX_EMMC_3MUX1, "mux_hsp_emmc_3mux1",
+static struct eswin_clk_info eic7700_hsp_clks[] = {
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_EMMC_3MUX1, "mux_hsp_emmc_3mux1",
 		      mux_mmc_3mux1_p, ARRAY_SIZE(mux_mmc_3mux1_p),
 		      CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC0_REG, 16, 2, 0,
 		      mux_mmc_3mux1_tbl),
-	ESWIN_MUX_TBL(EIC7700_HSP_CLK_MUX_SD0_3MUX1, "mux_hsp_sd0_3mux1",
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_SD0_3MUX1, "mux_hsp_sd0_3mux1",
 		      mux_mmc_3mux1_p, ARRAY_SIZE(mux_mmc_3mux1_p),
 		      CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC1_REG, 16, 2, 0,
 		      mux_mmc_3mux1_tbl),
-	ESWIN_MUX_TBL(EIC7700_HSP_CLK_MUX_SD1_3MUX1, "mux_hsp_sd1_3mux1",
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_SD1_3MUX1, "mux_hsp_sd1_3mux1",
 		      mux_mmc_3mux1_p, ARRAY_SIZE(mux_mmc_3mux1_p),
 		      CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC2_REG, 16, 2, 0,
 		      mux_mmc_3mux1_tbl),
-	ESWIN_MUX(EIC7700_HSP_CLK_MUX_EMMC_CQE_2MUX1, "mux_hsp_emmc_cqe_2mux1",
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_EMMC_CQE_2MUX1, "mux_hsp_emmc_cqe_2mux1",
 		  mux_mmc_2mux1_p, ARRAY_SIZE(mux_mmc_2mux1_p),
-		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC0_REG, 0, 1, 0),
-	ESWIN_MUX(EIC7700_HSP_CLK_MUX_SD0_CQE_2MUX1, "mux_hsp_sd0_cqe_2mux1",
+		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC0_REG, 0, 1, 0, NULL),
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_SD0_CQE_2MUX1, "mux_hsp_sd0_cqe_2mux1",
 		  mux_mmc_2mux1_p, ARRAY_SIZE(mux_mmc_2mux1_p),
-		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC1_REG, 0, 1, 0),
-	ESWIN_MUX(EIC7700_HSP_CLK_MUX_SD1_CQE_2MUX1, "mux_hsp_sd1_cqe_2mux1",
+		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC1_REG, 0, 1, 0, NULL),
+	ESWIN_MUX_TYPE(EIC7700_HSP_CLK_MUX_SD1_CQE_2MUX1, "mux_hsp_sd1_cqe_2mux1",
 		  mux_mmc_2mux1_p, ARRAY_SIZE(mux_mmc_2mux1_p),
-		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC2_REG, 0, 1, 0),
-};
-
-static struct eswin_clk_info eic7700_hsp_clks[] = {
+		  CLK_SET_RATE_PARENT, EIC7700_HSP_MSHC2_REG, 0, 1, 0, NULL),
 	ESWIN_GATE_TYPE(EIC7700_HSP_CLK_GATE_EMMC, "gate_clk_hsp_emmc",
 			EIC7700_HSP_CLK_MUX_EMMC_3MUX1,
 			CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
@@ -252,11 +249,14 @@ static struct eswin_clk_info eic7700_hsp_clks[] = {
 
 static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 {
+	const struct eswin_die_data *die_data;
 	struct device *dev = &pdev->dev;
 	struct auxiliary_device *adev;
 	struct eswin_clock_data *data;
 	struct regmap *regmap;
+	char *rst_name = NULL;
 	struct clk_hw *hw;
+	char *name = NULL;
 	int i, ret;
 
 	data = eswin_clk_init(pdev, EIC7700_HSP_NR_CLKS);
@@ -269,6 +269,13 @@ static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return dev_err_probe(dev, PTR_ERR(regmap),
 				     "failed to get regmap!\n");
+
+	die_data = device_get_match_data(&pdev->dev);
+	if (!die_data)
+		return -ENODEV;
+
+	data->die_data = die_data;
+	rst_name = devm_kasprintf(dev, GFP_KERNEL, "d%d-hsp-reset", data->die_data->die_id);
 
 	ret = eswin_clk_register_fixed_factor(dev, eic7700_hsp_factor_clks,
 					      ARRAY_SIZE(eic7700_hsp_factor_clks),
@@ -283,13 +290,6 @@ static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, ret,
 				     "failed to register gate clock\n");
 
-	ret = eswin_clk_register_mux(dev, eic7700_hsp_mux_clks,
-				     ARRAY_SIZE(eic7700_hsp_mux_clks),
-				     data);
-	if (ret)
-		return dev_err_probe(dev, ret,
-				     "failed to register mux clock\n");
-
 	ret = eswin_clk_register_clks(dev, eic7700_hsp_clks,
 				      ARRAY_SIZE(eic7700_hsp_clks), data);
 	if (ret)
@@ -297,10 +297,11 @@ static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 				     "failed to register clock\n");
 
 	for (i = 0; i < ARRAY_SIZE(eic7700_hsp_spec_gate_clks); i++) {
-		struct eic7700_hsp_clk_gate *gate;
+		const struct eic7700_hsp_clk_gate *gate = &eic7700_hsp_spec_gate_clks[i];
+		name = devm_kasprintf(dev, GFP_KERNEL, "d%d_%s",
+				      data->die_data->die_id, gate->name);
 
-		gate = &eic7700_hsp_spec_gate_clks[i];
-		hw = hsp_clk_register_gate(dev, gate->id, gate->name,
+		hw = hsp_clk_register_gate(dev, gate->id, name,
 					   gate->parent_data, gate->flags,
 					   regmap, gate->offset,
 					   gate->ref_offset, gate->bit_idx);
@@ -316,7 +317,7 @@ static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 	if (ret)
 		return dev_err_probe(dev, ret, "add clk provider failed\n");
 
-	adev = devm_auxiliary_device_create(dev, "hsp-reset", NULL);
+	adev = devm_auxiliary_device_create(dev, rst_name, NULL);
 	if (!adev)
 		return dev_err_probe(dev, -ENODEV,
 				     "register hsp-reset device failed\n");
@@ -324,8 +325,17 @@ static int eic7700_hsp_clk_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct eswin_die_data eic7700_hsp_die0_data = {
+	.die_id = 0,
+};
+
+static const struct eswin_die_data eic7700_hsp_die1_data = {
+	.die_id = 1,
+};
+
 static const struct of_device_id eic7700_hsp_clock_dt_ids[] = {
-	{ .compatible = "eswin,eic7700-hspcrg", },
+	{ .compatible = "eswin,eic7700-hspcrg", .data = &eic7700_hsp_die0_data},
+	{ .compatible = "eswin,eic7700-hspcrg-d1", .data = &eic7700_hsp_die1_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, eic7700_hsp_clock_dt_ids);
