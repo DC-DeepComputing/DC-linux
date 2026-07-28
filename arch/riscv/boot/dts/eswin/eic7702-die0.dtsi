@@ -1,0 +1,825 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+* Copyright (c) 2026 Beijing ESWIN Computing Technology Co., Ltd.
+*/
+#include <dt-bindings/riscv/physical-memory.h>
+#include <dt-bindings/reset/eswin,eic7700-reset.h>
+#include <dt-bindings/clock/eswin,eic7700-clock.h>
+#include <dt-bindings/clock/eswin,eic7700-hspcrg.h>
+#include <dt-bindings/reset/eswin,eic7700-hspcrg.h>
+#include <dt-bindings/i2c/i2c.h>
+#include <dt-bindings/gpio/gpio.h>
+
+#define I2C_BITRATE_STANDARD    100000	/* 100 Kbit/s */
+#define I2C_BITRATE_FAST        400000	/* 400 Kbit/s */
+#define I2C_BITRATE_FAST_PLUS   1000000 /* 1 Mbit/s */
+#define I2C_BITRATE_HIGH        3400000	/* 3.4 Mbit/s */
+#define I2C_BITRATE_ULTRA       5000000 /* 5 Mbit/s */
+
+#define DIE0_CLOCK_FREQ 200000000
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	riscv,physical-memory-regions =
+	<0x000 0x00000000 0x200 0x00000000 (PMA_RW | PMA_IO) 0x0>,
+	<0x000 0x80000000 0x00f 0x80000000 (PMA_RWXA | PMA_NONCOHERENT_MEMORY) 0x0>,
+	<0x0c0 0x00000000 0x010 0x00000000 (PMA_RWX | PMA_NONCACHEABLE_MEMORY | PMR_ALIAS(1)) 0x0>,
+	<0x020 0x00000000 0x010 0x00000000 (PMA_RWXA | PMA_NONCOHERENT_MEMORY) 0x0>,
+	<0x0e0 0x00000000 0x010 0x00000000 (PMA_RWX | PMA_NONCACHEABLE_MEMORY | PMR_ALIAS(3)) 0x0>;
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <1000000>;
+
+		cpu-map {
+			socket0 {
+				cluster0 {
+					core0 {
+						cpu = <&cpu0>;
+					};
+					core1 {
+						cpu = <&cpu1>;
+					};
+					core2 {
+						cpu = <&cpu2>;
+					};
+					core3 {
+						cpu = <&cpu3>;
+					};
+				};
+			};
+
+			socket1 {
+				cluster1 {
+					core0 {
+						cpu = <&cpu4>;
+					};
+					core1 {
+						cpu = <&cpu5>;
+					};
+					core2 {
+						cpu = <&cpu6>;
+					};
+					core3 {
+						cpu = <&cpu7>;
+					};
+				};
+			};
+		};
+
+		cpu0: cpu@0 {
+			compatible = "eswin,eic770x", "riscv";
+			device_type = "cpu";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <32768>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <32>;
+			i-cache-block-size = <64>;
+			i-cache-sets = <128>;
+			i-cache-size = <32768>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			next-level-cache = <&d0_l2_cache_0>;
+			reg = <0x0>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "sscofpmf",
+					       "zba", "zbb", "zicsr", "zifencei";
+			tlb-split;
+
+			numa-node-id = <0>;
+			cpu0_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu1: cpu@1 {
+			compatible = "eswin,eic770x", "riscv";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <32768>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <32>;
+			device_type = "cpu";
+			i-cache-block-size = <64>;
+			i-cache-sets = <128>;
+			i-cache-size = <32768>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			next-level-cache = <&d0_l2_cache_1>;
+			reg = <0x1>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "sscofpmf",
+					       "zba", "zbb", "zicsr", "zifencei";
+			tlb-split;
+
+			numa-node-id = <0>;
+			cpu1_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu2: cpu@2 {
+			compatible = "eswin,eic770x", "riscv";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <32768>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <32>;
+			device_type = "cpu";
+			i-cache-block-size = <64>;
+			i-cache-sets = <128>;
+			i-cache-size = <32768>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			next-level-cache = <&d0_l2_cache_2>;
+			reg = <0x2>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "sscofpmf",
+					       "zba", "zbb", "zicsr", "zifencei";
+			tlb-split;
+
+			numa-node-id = <0>;
+			cpu2_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		cpu3: cpu@3 {
+			compatible = "eswin,eic770x", "riscv";
+			d-cache-block-size = <64>;
+			d-cache-sets = <128>;
+			d-cache-size = <32768>;
+			d-tlb-sets = <1>;
+			d-tlb-size = <32>;
+			device_type = "cpu";
+			i-cache-block-size = <64>;
+			i-cache-sets = <128>;
+			i-cache-size = <32768>;
+			i-tlb-sets = <1>;
+			i-tlb-size = <32>;
+			mmu-type = "riscv,sv48";
+			next-level-cache = <&d0_l2_cache_3>;
+			reg = <0x3>;
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "sscofpmf",
+					       "zba", "zbb", "zicsr", "zifencei";
+			tlb-split;
+
+			numa-node-id = <0>;
+			cpu3_intc: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+
+		d0_l2_cache_0: d0-l2-cache0 {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-sets = <512>;
+			cache-size = <262144>;
+			cache-unified;
+			next-level-cache = <&d0_ccache>;
+			numa-node-id = <0>;
+		};
+
+		d0_l2_cache_1: d0-l2-cache1 {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-sets = <512>;
+			cache-size = <262144>;
+			cache-unified;
+			next-level-cache = <&d0_ccache>;
+			numa-node-id = <0>;
+		};
+
+		d0_l2_cache_2: d0-l2-cache2 {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-sets = <512>;
+			cache-size = <262144>;
+			cache-unified;
+			next-level-cache = <&d0_ccache>;
+			numa-node-id = <0>;
+		};
+
+		d0_l2_cache_3: d0-l2-cache3 {
+			compatible = "cache";
+			cache-block-size = <64>;
+			cache-level = <2>;
+			cache-sets = <512>;
+			cache-size = <262144>;
+			cache-unified;
+			next-level-cache = <&d0_ccache>;
+			numa-node-id = <0>;
+		};
+	};
+
+	pmu {
+		compatible = "riscv,pmu";
+		riscv,event-to-mhpmcounters =
+				<0x00001 0x00001 0x00000001>,
+				<0x00002 0x00002 0x00000004>,
+				<0x00004 0x00006 0x00000078>,
+				<0x10009 0x10009 0x00000078>,
+				<0x10019 0x10019 0x00000078>,
+				<0x10021 0x10021 0x00000078>;
+		riscv,event-to-mhpmevent =
+				<0x00004 0x00000000 0x00000202>,
+				<0x00005 0x00000000 0x00004000>,
+				<0x00006 0x00000000 0x00002001>,
+				<0x10009 0x00000000 0x00000102>,
+				<0x10019 0x00000000 0x00001002>,
+				<0x10021 0x00000000 0x00000802>;
+		riscv,raw-event-to-mhpmcounters =
+				<0x00000000 0x00000000 0xffffffff 0xfc0000ff 0x00000078>,
+				<0x00000000 0x00000001 0xffffffff 0xfffe07ff 0x00000078>,
+				<0x00000000 0x00000002 0xffffffff 0xfffe00ff 0x00000078>,
+				<0x00000000 0x00000003 0xfffffffc 0x000000ff 0x00000078>,
+				<0x00000000 0x00000004 0xffffffc0 0x000000ff 0x00000078>,
+				<0x00000000 0x00000005 0xffffffff 0xfffffdff 0x00000078>,
+				<0x00000000 0x00000006 0xfffffe00 0x110204ff 0x00000078>,
+				<0x00000000 0x00000007 0xffffffff 0xf00000ff 0x00000078>,
+				<0x00000000 0x00000008 0xfffffe04 0x000000ff 0x00000078>,
+				<0x00000000 0x00000009 0xffffffff 0xffffc0ff 0x00000078>,
+				<0x00000000 0x0000000a 0xffffffff 0xf00000ff 0x00000078>,
+				<0x00000000 0x0000000b 0xffffffff 0xfffffcff 0x00000078>,
+				<0x00000000 0x0000000c 0xfffffff0 0x000000ff 0x00000078>,
+				<0x00000000 0x0000000d 0xffffffff 0x800000ff 0x00000078>,
+				<0x00000000 0x0000000e 0xffffffff 0xf80000ff 0x00000078>,
+				<0x00000000 0x0000000f 0xfffffffc 0x000000ff 0x00000078>;
+	};
+
+	d0_clock_24m: d0-clock-24m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+	};
+
+	SOC:soc {
+		compatible = "simple-bus";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		dma-noncoherent;
+
+		clint: timer@2000000 {
+			compatible = "eswin,eic7700-clint", "sifive,clint0";
+			reg = <0x0 0x02000000 0x0 0x10000>;
+			interrupts-extended =
+			<&cpu0_intc 3>, <&cpu0_intc 7>,
+			<&cpu1_intc 3>, <&cpu1_intc 7>,
+			<&cpu2_intc 3>, <&cpu2_intc 7>,
+			<&cpu3_intc 3>, <&cpu3_intc 7>;
+			numa-node-id = <0>;
+		};
+
+		d0_ccache: cache-controller@2010000 {
+			compatible = "eswin,eic7700-l3-cache", "sifive,ccache0", "cache";
+			reg = <0x0 0x2010000 0x0 0x4000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			cache-block-size = <64>;
+			cache-level = <3>;
+			cache-sets = <4096>;
+			cache-size = <4194304>;
+			cache-unified;
+			interrupts = <1>, <3>, <4>, <2>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			ranges;
+			zero-device@1a000000 {
+				compatible = "l3,zero-device";
+				reg = <0x0 0x1a000000 0x0 0x400000>;
+			};
+		};
+
+		d0_plic: interrupt-controller@c000000 {
+			compatible = "eswin,eic7700-plic", "sifive,plic-1.0.0";
+			reg = <0x0 0xc000000 0x0 0x4000000>;
+			interrupt-controller;
+			interrupts-extended =
+			<&cpu0_intc 11>, <&cpu0_intc 9>,
+			<&cpu1_intc 11>, <&cpu1_intc 9>,
+			<&cpu2_intc 11>, <&cpu2_intc 9>,
+			<&cpu3_intc 11>, <&cpu3_intc 9>;
+			riscv,ndev = <520>;
+			#address-cells = <0>;
+			#interrupt-cells = <1>;
+			numa-node-id = <0>;
+		};
+
+		d0_hsp: bus@50400000 {
+			compatible = "simple-pm-bus";
+			ranges = <0x0 0x50400000 0x0 0x50400000 0x0 0xa0000>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			d0_gmac0: ethernet@50400000 {
+				compatible = "eswin,eic7700-qos-eth", "snps,dwmac-5.20";
+				reg = <0x0 0x50400000 0x0 0x10000>;
+				interrupts = <61>;
+				interrupt-names = "macirq";
+				interrupt-parent = <&d0_plic>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>,
+					<&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					<&d0_clocks EIC7700_CLK_MUX_SYSCFG_CLK_ROOT_2MUX1_GFREE>,
+					<&d0_clocks EIC7700_CLK_GATE_HSP_ETH0_CORE_CLK>;
+				clock-names = "axi", "cfg", "stmmaceth", "tx";
+				resets = <&d0_reset EIC7700_RESET_HSP_ETH0_ARST>;
+				reset-names = "stmmaceth";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x100 0x108 0x118 0x114 0x11c>;
+				snps,aal;
+				snps,fixed-burst;
+				snps,tso;
+				snps,axi-config = <&d0_stmmac_axi_setup_gmac0>;
+				numa-node-id = <0>;
+				status = "disabled";
+
+				d0_gmac0_mdio: mdio {
+					compatible = "snps,dwmac-mdio";
+					#address-cells = <1>;
+					#size-cells = <0>;
+				};
+
+				d0_stmmac_axi_setup_gmac0: stmmac-axi-config {
+					snps,blen = <0 0 0 0 16 8 4>;
+					snps,rd_osr_lmt = <2>;
+					snps,wr_osr_lmt = <2>;
+				};
+			};
+
+			d0_gmac1: ethernet@50410000 {
+				compatible = "eswin,eic7700-qos-eth-clk-inversion", "snps,dwmac-5.20";
+				reg = <0x0 0x50410000 0x0 0x10000>;
+				interrupts = <70>;
+				interrupt-names = "macirq";
+				interrupt-parent = <&d0_plic>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>,
+					<&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					<&d0_clocks EIC7700_CLK_MUX_SYSCFG_CLK_ROOT_2MUX1_GFREE>,
+					<&d0_clocks EIC7700_CLK_GATE_HSP_ETH1_CORE_CLK>;
+				clock-names = "axi", "cfg", "stmmaceth", "tx";
+				resets = <&d0_reset EIC7700_RESET_HSP_ETH1_ARST>;
+				reset-names = "stmmaceth";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x200 0x208 0x218 0x214 0x21c>;
+				snps,aal;
+				snps,fixed-burst;
+				snps,tso;
+				snps,axi-config = <&d0_stmmac_axi_setup_gmac1>;
+				numa-node-id = <0>;
+				status = "disabled";
+
+				d0_gmac1_mdio: mdio {
+					compatible = "snps,dwmac-mdio";
+					#address-cells = <1>;
+					#size-cells = <0>;
+				};
+
+				d0_stmmac_axi_setup_gmac1: stmmac-axi-config {
+					snps,blen = <0 0 0 0 16 8 4>;
+					snps,rd_osr_lmt = <2>;
+					snps,wr_osr_lmt = <2>;
+				};
+			};
+
+			d0_hsp_sp_csr: hsp-sp-top-csr@50440000 {
+				compatible = "eswin,eic7700-syscfg", "syscon";
+				reg = <0x0 0x50440000 0x0 0x2000>;
+				numa-node-id = <0>;
+			};
+
+			d0_sdhci_emmc: mmc@50450000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50450000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <79>;
+				assigned-clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_MSHC0_CORE_CLK>;
+				assigned-clock-rates = <200000000>;
+				bus-width = <8>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_MSHC0_CORE_CLK>,
+						<&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <200000000>;
+				resets = <&d0_reset EIC7700_RESET_HSP_EMMC_ARST>,
+					<&d0_reset EIC7700_RESET_MSHC0_PHY>,
+					<&d0_reset EIC7700_RESET_HSP_EMMC_PRST>,
+					<&d0_reset EIC7700_RESET_MSHC0_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x508 0x50c>;
+				numa-node-id = <0>;
+				status = "disabled";
+			};
+		};
+
+		d0_hspcrg: clock-controller@50440000 {
+			compatible = "eswin,eic7700-hspcrg";
+			reg = <0x0 0x50440000 0x0 0x2000>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+				 <&d0_clocks EIC7700_CLK_FIXED_FACTOR_CLK_1M_DIV24>,
+				 <&d0_clocks EIC7700_CLK_GATE_HSP_SATA_OOB_CLK>;
+			clock-names = "cfg", "mmc", "sata";
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+
+		d0_wdt0: watchdog@50800000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x0 0x50800000 0x0 0x4000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <87>;
+			clocks =<&d0_clocks EIC7700_CLK_GATE_LSP_WDT0_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_WDT0>;
+			reset-names = "rst";
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_wdt1: watchdog@50804000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x0 0x50804000 0x0 0x4000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <88>;
+			clocks =<&d0_clocks EIC7700_CLK_GATE_LSP_WDT1_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_WDT1>;
+			reset-names = "rst";
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_wdt2: watchdog@50808000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x0 0x50808000 0x0 0x4000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <89>;
+			clocks =<&d0_clocks EIC7700_CLK_GATE_LSP_WDT2_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_WDT2>;
+			reset-names = "rst";
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_wdt3: watchdog@5080c000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x0 0x5080c000 0x0 0x4000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <90>;
+			clocks =<&d0_clocks EIC7700_CLK_GATE_LSP_WDT3_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_WDT3>;
+			reset-names = "rst";
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_uart0: serial@50900000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x50900000 0x0 0x10000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <100>;
+			clock-frequency = <DIE0_CLOCK_FREQ>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			numa-node-id = <0>;
+		};
+
+		d0_uart1: serial@50910000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x50910000 0x0 0x10000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <101>;
+			clock-frequency = <DIE0_CLOCK_FREQ>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			numa-node-id = <0>;
+
+		};
+
+		d0_uart2: serial@50920000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x50920000 0x0 0x10000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <102>;
+			clock-frequency = <DIE0_CLOCK_FREQ>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			numa-node-id = <0>;
+		};
+
+		d0_uart3: serial@50930000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x50930000 0x0 0x10000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <103>;
+			clock-frequency = <DIE0_CLOCK_FREQ>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			numa-node-id = <0>;
+		};
+
+		d0_uart4: serial@50940000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x50940000 0x0 0x10000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <104>;
+			clock-frequency = <DIE0_CLOCK_FREQ>;
+			reg-io-width = <4>;
+			reg-shift = <2>;
+			numa-node-id = <0>;
+		};
+
+		d0_i2c0: i2c@50950000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x50950000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C0_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C0>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <105>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c1: i2c@50960000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x50960000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C1_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C1>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <106>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c2: i2c@50970000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x50970000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C2_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C2>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <107>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c3: i2c@50980000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x50980000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C3_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C3>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <108>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c4: i2c@50990000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x50990000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C4_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C4>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <109>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c5: i2c@509a0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x509a0000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C5_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C5>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <110>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c6: i2c@509b0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x509b0000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C6_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C6>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <111>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c7: i2c@509c0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x509c0000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C7_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C7>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <112>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c8: i2c@509d0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x509d0000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C8_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C8>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <113>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_i2c9: i2c@509e0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x509e0000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_I2C9_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_I2C9>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <114>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_aon_i2c0: i2c@51830000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x51830000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_AON_I2C0_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_ANO0>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <290>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+		};
+
+		d0_aon_i2c1: i2c@51838000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x51838000 0x0 0x8000>;
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_AON_I2C1_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_ANO1>;
+			reset-names = "rst";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <291>;
+			interrupt-parent = <&d0_plic>;
+			numa-node-id = <0>;
+		};
+
+		d0_gpio: gpio@51600000 {
+			compatible = "snps,dw-apb-gpio";
+			reg = <0x0 0x51600000 0x0 0x80>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			numa-node-id = <0>;
+
+			d0_gpioA: gpio-port@0 {
+				compatible = "snps,dw-apb-gpio-port";
+				reg = <0>;
+				interrupt-parent = <&d0_plic>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				interrupts =
+				<303>, <304>, <305>, <306>, <307>, <308>, <309>,
+				<310>, <311>, <312>, <313>, <314>, <315>, <316>,
+				<317>, <318>, <319>, <320>, <321>, <322>, <323>,
+				<324>, <325>, <326>, <327>, <328>, <329>, <330>,
+				<331>, <332>, <333>, <334>;
+				gpio-controller;
+				ngpios = <32>;
+				#gpio-cells = <2>;
+			};
+
+			d0_gpioB: gpio-port@1 {
+				compatible = "snps,dw-apb-gpio-port";
+				reg = <1>;
+				gpio-controller;
+				ngpios = <32>;
+				#gpio-cells = <2>;
+			};
+
+			d0_gpioC: gpio-port@2 {
+				compatible = "snps,dw-apb-gpio-port";
+				reg = <2>;
+				gpio-controller;
+				ngpios = <32>;
+				#gpio-cells = <2>;
+			};
+
+			d0_gpioD: gpio-port@3 {
+				compatible = "snps,dw-apb-gpio-port";
+				reg = <3>;
+				gpio-controller;
+				ngpios = <16>;
+				#gpio-cells = <2>;
+			};
+		};
+
+		d0_pinctrl: pinctrl@51600080 {
+			compatible = "eswin,eic7700-pinctrl", "syscon";
+			reg = <0x0 0x51600080 0x0 0x1fff80>;
+			numa-node-id = <0>;
+		};
+
+		d0_clocks: clock-controller@51828000 {
+			compatible = "eswin,eic7700-clock";
+			reg = <0x0 0x51828000 0x0 0x300>;
+			#clock-cells = <1>;
+			numa-node-id = <0>;
+			clocks = <&d0_clock_24m>;
+		};
+
+		d0_reset: reset-controller@51828300 {
+			compatible = "eswin,eic7700-reset";
+			reg = <0x0 0x51828300 0x0 0x200>;
+			#reset-cells = <1>;
+			numa-node-id = <0>;
+		};
+
+		d0_d2d: d2d-unit@52100000 {
+			compatible = "eswin,eic7700-d2d";
+		};
+
+		d0_ddr0: ddr-controller@52300000 {
+			compatible = "eswin,ddrc-1.20a";
+		};
+
+		d0_ddr1: ddr-controller@52380000 {
+			compatible = "eswin,ddrc-1.20a";
+		};
+	};
+};
+
+
+
+#include "eic7702-d0-pinctrl.dtsi"
