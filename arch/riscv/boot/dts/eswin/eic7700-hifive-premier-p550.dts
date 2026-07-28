@@ -236,8 +236,16 @@
 	};
 };
 
+&pcie {
+	status = "okay";
+};
+
 &pinctrl {
 	vrgmii-supply = <&vcc_1v8>;
+};
+
+&sata {
+	status = "okay";
 };
 
 &sdhci_emmc {
@@ -269,6 +277,26 @@
 };
 
 &uart2 {
+	status = "okay";
+};
+
+&usb0 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
+	status = "okay";
+};
+
+&usb1 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
 	status = "okay";
 };
 
