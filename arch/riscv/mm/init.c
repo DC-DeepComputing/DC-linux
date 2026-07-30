@@ -298,7 +298,14 @@ static void __init setup_bootmem(void)
 	if (!IS_ENABLED(CONFIG_BUILTIN_DTB))
 		memblock_reserve(dtb_early_pa, fdt_totalsize(dtb_early_va));
 
-	dma_contiguous_reserve(dma32_phys_limit);
+	/*
+	* dma_contiguous_reserve() is deferred to misc_mem_init(), which runs
+	* after arch_numa_init(). CONFIG_DMA_NUMA_CMA needs NUMA nodes to be
+	* online and memblock regions to carry their nid before it can size
+	* and place a per-node CMA area, and neither is true yet here: we are
+	* still ahead of unflatten_device_tree() in setup_arch(), and
+	* arch_numa_init() itself is off the unflattened tree.
+	*/
 }
 
 #ifdef CONFIG_RELOCATABLE
@@ -1356,6 +1363,14 @@ void __init misc_mem_init(void)
 {
 	early_memtest(min_low_pfn << PAGE_SHIFT, max_low_pfn << PAGE_SHIFT);
 	arch_numa_init();
+
+	/*
+	* Must run after arch_numa_init(): NUMA nodes need to be online and
+	* memblock regions need their nid set before per-node CMA areas
+	* (CONFIG_DMA_NUMA_CMA) can be reserved. See the comment in
+	* setup_bootmem().
+	*/
+	dma_contiguous_reserve(dma32_phys_limit);
 #ifdef CONFIG_SPARSEMEM_VMEMMAP
 	/* The entire VMEMMAP region has been populated. Flush TLB for this region */
 	local_flush_tlb_kernel_range(VMEMMAP_START, VMEMMAP_END);
