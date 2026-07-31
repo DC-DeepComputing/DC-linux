@@ -41,9 +41,9 @@
 	aliases {
 		serial0 = &d0_uart0;
 		ethernet0 = &d0_gmac0;
-		// ethernet1 = &d0_gmac1;
+		ethernet1 = &d0_gmac1;
 		ethernet2 = &d1_gmac0;
-		// ethernet3 = &d1_gmac1;
+		ethernet3 = &d1_gmac1;
 		mmc0 = &d0_sdhci_emmc;
 	};
 
@@ -99,6 +99,11 @@
 
 /* Register module nodes of Die0 */
 
+&d0_aon_i2c0 {
+	/* unused */
+	status = "disabled";
+};
+
 &d0_gmac0 {
 	phy-handle = <&d0_gmac0_phy0>;
 	phy-mode = "rgmii-id";
@@ -124,8 +129,8 @@
 	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&d0_gpio34_pins>;
-	rx-internal-delay-ps = <80>;
-	tx-internal-delay-ps = <20>;
+	rx-internal-delay-ps = <200>;
+	tx-internal-delay-ps = <2100>;
 	status = "okay";
 };
 
@@ -137,73 +142,6 @@
 		reset-assert-us = <10000>;
 		reset-deassert-us = <80000>;
 	};
-};
-
-&d0_sdhci_emmc {
-	eswin,drive-impedance-ohms = <33>;
-	mmc-hs400-1_8v;
-	no-sd;
-	no-sdio;
-	non-removable;
-	status = "okay";
-};
-
-&d0_wdt0 {
-	status = "okay";
-};
-
-&d0_wdt1 {
-	status = "okay";
-};
-
-&d0_wdt2 {
-	status = "okay";
-};
-
-&d0_wdt3 {
-	status = "okay";
-};
-
-&d0_uart0 {
-	/* debug */
-	status = "okay";
-};
-
-&d0_uart1 {
-	/* unused */
-	status = "disabled";
-};
-
-&d0_uart2 {
-	status = "okay";
-};
-
-&d0_uart3 {
-	/* unused */
-	status = "disabled";
-};
-
-&d0_uart4 {
-	/* unused */
-	status = "disabled";
-};
-
-&d0_gpio {
-	status = "okay";
-};
-
-&d0_pinctrl {
-	status = "okay";
-	vrgmii-supply = <&vcc_1v8>;
-};
-
-&d0_reset {
-	status = "okay";
-};
-
-&d0_aon_i2c0 {
-	/* unused */
-	status = "disabled";
 };
 
 &d0_aon_i2c1 {
@@ -235,6 +173,104 @@
 	};
 };
 
+&d0_pcie {
+	status = "okay";
+};
+
+&d0_gpio {
+	status = "okay";
+};
+
+&d0_pinctrl {
+	status = "okay";
+	vrgmii-supply = <&vcc_1v8>;
+};
+
+&d0_sata {
+	status = "okay";
+};
+
+&d0_sdhci_emmc {
+	eswin,drive-impedance-ohms = <33>;
+	mmc-hs400-1_8v;
+	no-sd;
+	no-sdio;
+	non-removable;
+	status = "okay";
+};
+
+&d0_sdio0 {
+	status = "okay";
+};
+
+&d0_sdio1 {
+	status = "disabled";
+};
+
+&d0_uart0 {
+	/* debug */
+	status = "okay";
+};
+
+&d0_uart1 {
+	/* unused */
+	status = "disabled";
+};
+
+&d0_uart2 {
+	status = "okay";
+};
+
+&d0_uart3 {
+	/* unused */
+	status = "disabled";
+};
+
+&d0_uart4 {
+	/* unused */
+	status = "disabled";
+};
+
+&d0_usb0 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
+	status = "okay";
+};
+
+&d0_usb1 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
+	status = "okay";
+};
+
+&d0_wdt0 {
+	status = "okay";
+};
+
+&d0_wdt1 {
+	status = "okay";
+};
+
+&d0_wdt2 {
+	status = "okay";
+};
+
+&d0_wdt3 {
+	status = "okay";
+};
+
+&d0_reset {
+	status = "okay";
+};
+
 &d0_d2d {
 	status = "disabled";
 };
@@ -248,6 +284,11 @@
 };
 
 /* Register module nodes of Die1 */
+
+&d1_aon_i2c0 {
+	/* unused */
+	status = "disabled";
+};
 
 &d1_gmac0 {
 	phy-handle = <&d1_gmac0_phy0>;
@@ -274,8 +315,8 @@
 	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&d1_gpio34_pins>;
-	rx-internal-delay-ps = <80>;
-	tx-internal-delay-ps = <20>;
+	rx-internal-delay-ps = <200>;
+	tx-internal-delay-ps = <2100>;
 	status = "okay";
 };
 
@@ -289,24 +330,55 @@
 	};
 };
 
+&d1_aon_i2c1 {
+	/* d1 npu pmic */
+	status = "okay";
+	tps549d22@10 {
+		compatible = "ti,tps549d22";
+		reg = <0x10>;
+		eswin,regulator_default-microvolt=<1000000>;
+		eswin,regulator_label = "Supply VDD1", "D1 NPU Voltage";
+		label = "d1_npu_vdd";
+		regulators{
+			d1_npu_vcc:npu_svcc{
+				regulator-name="D1_NPU_SVCC";
+				regulator-min-microvolt=<700000>;
+				regulator-max-microvolt=<1100000>;
+				regulator-min-microamp=<20000000>;
+				regulator-max-microamp=<40000000>;
+				regulator-ov-protection-microvolt=<1100000>;
+			};
+		};
+	};
+};
+
+&d1_pcie {
+	status = "okay";
+};
+
+&d1_gpio {
+	status = "okay";
+};
+
+&d1_pinctrl {
+	status = "okay";
+	vrgmii-supply = <&vcc_1v8>;
+};
+
+&d1_sata {
+	status = "okay";
+};
+
 &d1_sdhci_emmc {
 	status = "disabled";
 };
 
-&d1_wdt0 {
+&d1_sdio0 {
 	status = "okay";
 };
 
-&d1_wdt1 {
-	status = "okay";
-};
-
-&d1_wdt2 {
-	status = "okay";
-};
-
-&d1_wdt3 {
-	status = "okay";
+&d1_sdio1 {
+	status = "disabled";
 };
 
 &d1_uart0 {
@@ -331,44 +403,44 @@
 	status = "disabled";
 };
 
-&d1_gpio {
+&d1_usb0 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
 	status = "okay";
 };
 
-&d1_pinctrl {
+&d1_usb1 {
+	wakeup-source;
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis_u2_susphy_quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,parkmode-disable-ss-quirk;
 	status = "okay";
-	vrgmii-supply = <&vcc_1v8>;
+};
+
+&d1_wdt0 {
+	status = "okay";
+};
+
+&d1_wdt1 {
+	status = "okay";
+};
+
+&d1_wdt2 {
+	status = "okay";
+};
+
+&d1_wdt3 {
+	status = "okay";
 };
 
 &d1_reset {
 	status = "okay";
-};
-
-&d1_aon_i2c0 {
-	/* unused */
-	status = "disabled";
-};
-
-&d1_aon_i2c1 {
-	/* d1 npu pmic */
-	status = "okay";
-	tps549d22@10 {
-		compatible = "ti,tps549d22";
-		reg = <0x10>;
-		eswin,regulator_default-microvolt=<1000000>;
-		eswin,regulator_label = "Supply VDD1", "D1 NPU Voltage";
-		label = "d1_npu_vdd";
-		regulators{
-			d1_npu_vcc:npu_svcc{
-				regulator-name="D1_NPU_SVCC";
-				regulator-min-microvolt=<700000>;
-				regulator-max-microvolt=<1100000>;
-				regulator-min-microamp=<20000000>;
-				regulator-max-microamp=<40000000>;
-				regulator-ov-protection-microvolt=<1100000>;
-			};
-		};
-	};
 };
 
 &d1_d2d {
