@@ -1,0 +1,81 @@
+# This is a basic workflow to help you get started with Actions       
+
+name: CI
+
+# Controls when the workflow will run 
+on:
+  # Triggers the workflow on push or pull request events but only for the $default-branch branch 
+  push:
+    branches: [ eic770x-master ]
+  pull_request:
+    branches: [ eic770x-master ]
+
+  # Allows you to run this workflow manually from the Actions tab 
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build" 
+  build:
+    # The type of runner that the job will run on
+    runs-on: self-hosted
+    env:
+      http_proxy: "http://10.10.3.72:7890"
+      https_proxy: "http://10.10.3.72:7890"
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout eic770x-master
+        uses: actions/checkout@v4
+        with:
+          ref: eic770x-master
+          path: eic770x-linux
+      # Runs a set of commands using the runners shell
+      - name: build-linux
+        id: build-linux
+        run: |
+          sudo docker ps   
+          pwd
+          sudo docker run --rm --name build-linux-$GITHUB_RUN_ID \
+                --privileged=true -v /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/eic770x-linux:/home/workspace \
+                -u root -w "/home/workspace"\
+                es_debian \
+                /bin/bash -c "
+                  cd /home/workspace 
+                  export PATH="/opt/riscv/bin:$PATH" 
+                  export ARCH=riscv
+                  export CROSS_COMPILE=riscv64-unknown-linux-gnu- 
+                  make eic7702_defconfig 
+                  make -j$(nproc) 
+                  DEB_BUILD_PROFILES=pkg.linux-upstream.nokernelheaders  make -j$(nproc) bindeb-pkg
+                  make modules_install INSTALL_MOD_PATH=/home/workspace
+                  mv ../*.deb .
+                "
+      - name: send-mail
+        if: ${{ failure() && steps.build-linux.conclusion == 'failure' }}
+        # if: ${{ success() && steps.build-linux.conclusion == 'success' }}
+        env: 
+             mail: ${{ secrets.SEND_MAIL }}
+        run: |
+          echo $mail
+          echo "CI build code failure ! $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/$JOB_ID" | mail -s "build code" $mail
+        
+      - name: upload
+        env: 
+             passd: ${{ secrets.SEND_MAIL }}
+        run: |
+          pwd
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/eic770x-linux/lib
+          #sudo rm -rf  eic770x-linux
+          zip -r -y modules.zip  modules
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  modules.zip ${{secrets.JFROG_PATH}}/eic770x-linux/modules.zip
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/eic770x-linux/arch/riscv
+          zip -r -y boot.zip boot
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  boot.zip ${{secrets.JFROG_PATH}}/eic770x-linux/boot.zip
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/eic770x-linux/
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  linux-image-*riscv64.deb ${{secrets.JFROG_PATH}}/eic770x-linu/linux-image-riscv64.deb
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  linux-libc-*riscv64.deb ${{secrets.JFROG_PATH}}/eic770x-linu/linux-libc-riscv64.deb
+          cd ../
+          sudo rm -rf  /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/eic770x-linux/
+
+
