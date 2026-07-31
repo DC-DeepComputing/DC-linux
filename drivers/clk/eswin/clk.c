@@ -605,7 +605,7 @@ int eswin_clk_register_clks(struct device *dev, struct eswin_clk_info *clks,
 							   div->shift, div->width, div->div_flags,
 							   div->priv_flag, &data->lock);
 			else
-				hw = devm_clk_hw_register_divider_parent_hw(dev, div->name, phw,
+				hw = devm_clk_hw_register_divider_parent_hw(dev, name, phw,
 									    div->flags,
 									    data->base + div->reg,
 									    div->shift, div->width,
