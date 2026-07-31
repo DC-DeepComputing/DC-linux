@@ -398,6 +398,35 @@
 				};
 			};
 
+			d0_sata: sata@50420000{
+				compatible = "eswin,eic7700-ahci", "snps,dwc-ahci";
+				reg = <0x0 0x50420000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <58>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+						<&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "pclk", "aclk";
+				phys = <&d0_sata_phy>;
+				phy-names = "sata-phy";
+				ports-implemented = <0x1>;
+				resets = <&d0_reset EIC7700_RESET_SATA_ARST>;
+				reset-names = "arst";
+				numa-node-id = <0>;
+				status = "disabled";
+			};
+
+			d0_sata_phy: sata-phy@50440300 {
+				compatible = "eswin,eic7700-sata-phy";
+				reg = <0x0 0x50440300 0x0 0x40>;
+				clocks = <&d0_hspcrg EIC7700_HSP_CLK_GATE_SATA>;
+				clock-names = "phy";
+				resets = <&d0_hspcrg EIC7700_HSP_RST_SATA_P0>,
+					 <&d0_hspcrg EIC7700_HSP_RST_SATA_PHY>;
+				reset-names = "port", "phy";
+				#phy-cells = <0>;
+				numa-node-id = <0>;
+			};
+
 			d0_hsp_sp_csr: hsp-sp-top-csr@50440000 {
 				compatible = "eswin,eic7700-syscfg", "syscon";
 				reg = <0x0 0x50440000 0x0 0x2000>;
@@ -425,6 +454,90 @@
 				numa-node-id = <0>;
 				status = "disabled";
 			};
+
+			d0_sdio0: mmc@50460000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50460000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <81>;
+				bus-width = <4>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_MSHC1_CORE_CLK>,
+					 <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <208000000>;
+				resets = <&d0_reset EIC7700_RESET_HSP_SD0_ARST>,
+					 <&d0_reset EIC7700_RESET_MSHC1_PHY>,
+					 <&d0_reset EIC7700_RESET_HSP_SD0_PRST>,
+					 <&d0_reset EIC7700_RESET_MSHC1_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x608 0x60c>;
+				numa-node-id = <0>;
+				status = "disabled";
+			};
+
+			d0_sdio1: mmc@50470000 {
+				compatible = "eswin,eic7700-dwcmshc";
+				reg = <0x0 0x50470000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <83>;
+				bus-width = <4>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_MSHC2_CORE_CLK>,
+					 <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>;
+				clock-names = "core", "bus";
+				max-frequency = <208000000>;
+				resets = <&d0_reset EIC7700_RESET_HSP_SD1_ARST>,
+					 <&d0_reset EIC7700_RESET_MSHC2_PHY>,
+					 <&d0_reset EIC7700_RESET_HSP_SD1_PRST>,
+					 <&d0_reset EIC7700_RESET_MSHC2_TXRX>;
+				reset-names = "axi", "phy", "prstn", "txrx";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x708 0x70c>;
+				numa-node-id = <0>;
+				status = "disabled";
+			};
+
+			d0_usb0: usb@50480000 {
+				compatible = "eswin,eic7700-dwc3";
+				reg = <0x0 0x50480000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <85>;
+				interrupt-names = "peripheral";
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>,
+					 <&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					 <&d0_hspcrg EIC7700_HSP_CLK_GATE_USB0>;
+				clock-names = "aclk", "cfg", "usb_en";
+				dr_mode = "host";
+				maximum-speed = "high-speed";
+				phy_type = "utmi";
+				resets = <&d0_reset EIC7700_RESET_USB0_VAUX>,
+					 <&d0_hspcrg EIC7700_HSP_RST_USB0>,
+					 <&d0_hspcrg EIC7700_HSP_RST_USB0_PHY>;
+				reset-names = "vaux", "usb_rst", "usb_phy";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x800 0x818>;
+				numa-node-id = <0>;
+				status = "disabled";
+			};
+
+			d0_usb1: usb@50490000 {
+				compatible = "eswin,eic7700-dwc3";
+				reg = <0x0 0x50490000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <86>;
+				interrupt-names = "host";
+				clocks = <&d0_clocks EIC7700_CLK_GATE_HSP_ACLK>,
+					 <&d0_clocks EIC7700_CLK_GATE_HSP_CFG_CLK>,
+					 <&d0_hspcrg EIC7700_HSP_CLK_GATE_USB1>;
+				clock-names = "aclk", "cfg", "usb_en";
+				dr_mode = "host";
+				maximum-speed = "high-speed";
+				phy_type = "utmi";
+				resets = <&d0_reset EIC7700_RESET_USB1_VAUX>,
+					 <&d0_hspcrg EIC7700_HSP_RST_USB1>,
+					 <&d0_hspcrg EIC7700_HSP_RST_USB1_PHY>;
+				reset-names = "vaux", "usb_rst", "usb_phy";
+				eswin,hsp-sp-csr = <&d0_hsp_sp_csr 0x900 0x918>;
+				numa-node-id = <0>;
+				status = "disabled";
+			};
 		};
 
 		d0_hspcrg: clock-controller@50440000 {
@@ -436,6 +549,7 @@
 			clock-names = "cfg", "mmc", "sata";
 			#clock-cells = <1>;
 			#reset-cells = <1>;
+			numa-node-id = <0>;
 		};
 
 		d0_wdt0: watchdog@50800000 {
@@ -816,6 +930,51 @@
 
 		d0_ddr1: ddr-controller@52380000 {
 			compatible = "eswin,ddrc-1.20a";
+		};
+
+		d0_pcie: pcie@54000000 {
+			compatible = "eswin,eic7700-pcie";
+			reg = <0x0 0x54000000 0x0 0x4000000>,
+			      <0x0 0x40000000 0x0 0x800000>,
+			      <0x0 0x50000000 0x0 0x100000>;
+			reg-names = "dbi", "config", "elbi";
+			ranges = <0x01000000 0x0 0x40800000 0x0 0x40800000 0x0 0x800000>,
+				 <0x02000000 0x0 0x41000000 0x0 0x41000000 0x0 0xf000000>,
+				 <0x43000000 0x80 0x00000000 0x80 0x00000000 0x2 0x00000000>;
+			interrupt-parent = <&d0_plic>;
+			interrupts = <220>, <179>, <180>, <181>, <182>, <183>, <184>, <185>, <186>;
+			interrupt-names = "msi", "inta", "intb", "intc", "intd";
+			interrupt-map-mask = <0x0 0x0 0x0 0x7>;
+			interrupt-map = <0x0 0x0 0x0 0x1 &d0_plic 179>,
+					<0x0 0x0 0x0 0x2 &d0_plic 180>,
+					<0x0 0x0 0x0 0x3 &d0_plic 181>,
+					<0x0 0x0 0x0 0x4 &d0_plic 182>;
+			bus-range = <0x00 0xff>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_PCIET_ACLK>,
+				 <&d0_clocks EIC7700_CLK_GATE_PCIET_CFG_CLK>,
+				 <&d0_clocks EIC7700_CLK_GATE_PCIET_CR_CLK>,
+				 <&d0_clocks EIC7700_CLK_GATE_PCIET_AUX_CLK>;
+			clock-names = "mstr", "dbi", "phy_reg", "aux";
+			device_type = "pci";
+			#interrupt-cells = <1>;
+			resets = <&d0_reset EIC7700_RESET_PCIE_CFG>,
+				 <&d0_reset EIC7700_RESET_PCIE_POWEUP>;
+			reset-names = "dbi", "pwr";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			numa-node-id = <0>;
+			status = "disabled";
+
+			pcie@0 {
+				reg = <0x0 0x0 0x0 0x0 0x0>;
+				ranges;
+				device_type = "pci";
+				num-lanes = <4>;
+				resets = <&d0_reset EIC7700_RESET_PCIE_PERST>;
+				reset-names = "perst";
+				#address-cells = <3>;
+				#size-cells = <2>;
+			};
 		};
 	};
 };
