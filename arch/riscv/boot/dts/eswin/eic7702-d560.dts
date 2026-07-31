@@ -44,6 +44,108 @@
 	clock-output-names = "d0_clock_24m";
 };
 
+&d0_gpio0_pins {
+	input-enable;
+	bias-disable;
+};
+
+&d0_gpio5_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio11_pins {
+	input-enable;
+	bias-pull-up;
+};
+
+&d0_gpio13_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio18_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio25_pins {
+	input-enable;
+	bias-disable;
+};
+
+&d0_gpio27_pins {
+	input-disable;
+	bias-disable;
+};
+
+&d0_gpio28_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio29_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio34_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio42_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio43_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio111_pins {
+	input-disable;
+	bias-disable;
+};
+
+&d0_pcie {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d1_gpio21_pins>;
+	pci-socket-gpios = <&d1_gpioA 21 GPIO_ACTIVE_HIGH>;
+};
+
+&d0_pinctrl {
+	/* pin header */
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_gpio6_pins &d0_gpio12_pins &d0_gpio39_pins
+				&d0_gpio40_pins &d0_gpio41_pins &d0_gpio46_pins
+				&d0_gpio47_pins &d0_gpio73_pins &d0_gpio74_pins
+				&d0_gpio75_pins &d0_gpio81_pins>;
+};
+
+&d0_sdio0 {
+	eswin,drive-impedance-ohms = <33>;
+	disable-wp;
+	no-mmc;
+	no-sdio;
+	status = "okay";
+};
+
+&d0_uart2 {
+	/* connect mcu */
+	status = "okay";
+};
+
+&d0_uart3 {
+	/* pin header */
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_uart3_pins>;
+};
+
 &d0_wdt0 {
 	status = "disabled";
 };
@@ -60,122 +162,108 @@
 	status = "disabled";
 };
 
-&d0_uart2 {
-	/* connect mcu */
-	status = "okay";
-};
-
-&d0_uart3 {
-	/* pin header */
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&d0_uart3_pins>;
-};
-
-&d0_pinctrl {
-	/* pin header */
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&d0_gpio6_pins &d0_gpio12_pins &d0_gpio39_pins
-				&d0_gpio40_pins &d0_gpio41_pins &d0_gpio46_pins
-				&d0_gpio47_pins &d0_gpio73_pins &d0_gpio74_pins
-				&d0_gpio75_pins &d0_gpio81_pins>;
-
-	d0_gpio0_pins: gpio0-pins {
-		pins = "gpio0";
-		function = "gpio";
-		input-enable;
-		bias-disable;
-	};
-
-	d0_gpio5_pins: gpio5-pins {
-		pins = "gpio5";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio11_pins: gpio11-pins {
-		pins = "gpio11";
-		function = "gpio";
-		input-enable;
-		bias-pull-up;
-	};
-
-	d0_gpio13_pins: gpio13-pins {
-		pins = "mode_set0";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio18_pins: gpio18-pins {
-		pins = "i2s0_bclk";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio25_pins: gpio25-pins {
-		pins = "i2s2_sdi";
-		function = "gpio";
-		input-enable;
-		bias-disable;
-	};
-
-	d0_gpio27_pins: gpio27-pins {
-		pins = "gpio27";
-		function = "gpio";
-		input-disable;
-		bias-disable;
-	};
-
-	d0_gpio28_pins: gpio28-pins {
-		pins = "gpio28";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio29_pins: gpio29-pins {
-		pins = "gpio29";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio34_pins: gpio34-pins {
-		pins = "gpio34";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio42_pins: gpio42-pins {
-		pins = "usb0_pwren";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio43_pins: gpio43-pins {
-		pins = "usb1_pwren";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d0_gpio111_pins: gpio111-pins {
-		pins = "gpio111";
-		function = "gpio";
-		input-disable;
-		bias-disable;
-	};
-};
-
 &d1_clock_24m {
 	clock-frequency = <24000000>;
 	clock-output-names = "d1_clock_24m";
+};
+
+&d1_gpio0_pins {
+	pins = "gpio0";
+	function = "gpio";
+	input-enable;
+	bias-disable;
+};
+
+&d1_gpio5_pins {
+	pins = "gpio5";
+	function = "gpio";
+	input-enable;
+	bias-disable;
+};
+
+&d1_gpio6_pins {
+	pins = "spi2_cs0_n";
+	function = "gpio";
+	input-enable;
+	bias-disable;
+};
+
+&d1_gpio27_pins {
+	pins = "gpio27";
+	function = "gpio";
+	input-disable;
+	bias-disable;
+};
+
+&d1_gpio28_pins {
+	pins = "gpio28";
+	function = "gpio";
+	input-disable;
+	bias-disable;
+};
+
+&d1_gpio29_pins {
+	pins = "gpio29";
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+&d1_gpio34_pins {
+	pins = "gpio34";
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+&d1_gpio42_pins {
+	pins = "usb0_pwren";
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+&d1_gpio43_pins {
+	pins = "usb1_pwren";
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+&d1_gpio111_pins {
+	input-disable;
+	bias-pull-up;
+};
+
+&d1_pcie {
+	status = "okay";
+};
+
+&d1_pinctrl {
+	/* pin header */
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d1_gpio36_pins &d1_gpio39_pins
+				&d1_gpio92_pins &d1_gpio93_pins
+				&d1_gpio18_pins>;
+};
+
+&d1_sdio0 {
+	eswin,drive-impedance-ohms = <33>;
+	no-mmc;
+	no-sd;
+	non-removable;
+	status = "okay";
+};
+
+&d1_uart1 {
+	/* BT M.2 KEY-E */
+	status = "okay";
+};
+
+&d1_uart2 {
+	/* unused */
+	status = "disabled";
 };
 
 &d1_wdt0 {
@@ -192,95 +280,6 @@
 
 &d1_wdt3 {
 	status = "disabled";
-};
-
-&d1_uart1 {
-	/* BT M.2 KEY-E */
-	status = "okay";
-};
-
-&d1_uart2 {
-	/* unused */
-	status = "disabled";
-};
-
-&d1_pinctrl {
-	/* pin header */
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&d1_gpio36_pins &d1_gpio39_pins
-				&d1_gpio92_pins &d1_gpio93_pins
-				&d1_gpio18_pins>;
-
-	d1_gpio0_pins: gpio0-pins {
-		pins = "gpio0";
-		function = "gpio";
-		input-enable;
-		bias-disable;
-	};
-
-	d1_gpio5_pins: gpio5-pins {
-		pins = "gpio5";
-		function = "gpio";
-		input-enable;
-		bias-disable;
-	};
-
-	d1_gpio6_pins: gpio6-pins {
-		pins = "spi2_cs0_n";
-		function = "gpio";
-		input-enable;
-		bias-disable;
-	};
-
-	d1_gpio27_pins: gpio27-pins {
-		pins = "gpio27";
-		function = "gpio";
-		input-disable;
-		bias-disable;
-	};
-
-	d1_gpio28_pins: gpio28-pins {
-		pins = "gpio28";
-		function = "gpio";
-		input-disable;
-		bias-disable;
-	};
-
-	d1_gpio29_pins: gpio29-pins {
-		pins = "gpio29";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d1_gpio34_pins: gpio34-pins {
-		pins = "gpio34";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d1_gpio42_pins: gpio42-pins {
-		pins = "usb0_pwren";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d1_gpio43_pins: gpio43-pins {
-		pins = "usb1_pwren";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
-
-	d1_gpio111_pins: gpio111-pins {
-		pins = "gpio111";
-		function = "gpio";
-		input-disable;
-		bias-pull-up;
-	};
 };
 
 /******** pin headers *********
