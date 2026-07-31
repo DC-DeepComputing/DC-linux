@@ -5,6 +5,10 @@
 
 /dts-v1/;
 
+#define MEMORY_SIZE_H           0x4
+#define MEMORY_SIZE_L           0x0
+#define CMA_SIZE                0x20000000
+
 #include "eic7700.dtsi"
 #include "eic7700-pinctrl.dtsi"
 #include <dt-bindings/gpio/gpio.h>
@@ -33,6 +37,58 @@
 		regulator-boot-on;
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x4 0x00000000>;
+	};
+
+	memory@59000000 {
+		device_type = "memory";
+		reg = <0x0 0x59000000 0x0 0x400000>;
+		numa-node-id = <0>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma {
+				compatible = "shared-dma-pool";
+				reusable;
+				size = <0x0 CMA_SIZE>;
+				alignment = <0x0 0x1000>;
+				alloc-ranges = <0x0 0x80000000 0x4 0x00000000>;
+				linux,cma-default;
+		};
+
+		npu_reserved: sprammemory@59000000 {
+				no-map;
+				reg = <0x0 0x59000000 0x0 0x400000>;
+		};
+
+		g2d_4GB_boundary_reserved_4k {
+				no-map;
+				reg = <0x0 0xfffff000 0x0 0x1000>;
+		};
+
+		g2d_8GB_boundary_reserved_4k {
+				no-map;
+				reg = <0x1 0xfffff000 0x0 0x1000>;
+		};
+
+		g2d_12GB_boundary_reserved_4k {
+				no-map;
+				reg = <0x2 0xfffff000 0x0 0x1000>;
+		};
+
+		mmz_nid_0_part_0 {
+				compatible = "eswin-reserve-memory";
+				reg = <0x3 0x0 0x1 0x80000000>;
+				no-map;
+		};
 	};
 };
 
@@ -143,6 +199,75 @@
 		compatible = "atmel,24c02";
 		reg = <0x50>;
 	};
+};
+
+&dc_test {
+	status = "disabled";
+};
+
+&video_output {
+	status = "okay";
+};
+
+&dc {
+	status = "okay";
+
+	dc_out: port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		dc_out_dpi: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&vd_input>;
+		};
+		dc_out_hdmi: endpoint@2 {
+			reg = <2>;
+			remote-endpoint = <&hdmi_in_dc>;
+		};
+	};
+};
+
+&virtual_display {
+	status = "okay";
+	port {
+		vd_input: endpoint {
+			remote-endpoint = <&dc_out_dpi>;
+		};
+	};
+};
+
+&dsi_output {
+	status = "okay";
+};
+
+&dsi_controller {
+	status = "okay";
+};
+
+&dw_hdmi {
+	status = "okay";
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			hdmi_in_dc: endpoint@0 {
+				remote-endpoint = <&dc_out_hdmi>;
+			};
+		};
+		/*
+		port@2 {
+			reg = <2>;
+			hdmi_in_i2s: endpoint@1 {
+				system-clock-frequency = <12288000>;
+				remote-endpoint = <&i2s0_endpoint>;
+			};
+		};
+		*/
+	};
+};
+
+&dw_hdmi_hdcp2 {
+    status = "okay";
 };
 
 &gmac0 {
