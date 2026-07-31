@@ -222,6 +222,86 @@
 			numa-node-id = <1>;
 		};
 
+		d1_dsi_controller: mipi_dsi@70270000 {
+			compatible = "eswin,eic7700-dsi";
+			reg = <0x0 0x70270000 0x0 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&d1_clocks EIC7700_CLK_FIXED_FACTOR_MIPI_TXESC_DIV10>;
+			clock-names = "pclk";
+			resets = <&d1_reset EIC7700_RESET_VO_MIPI>;
+			reset-names ="phyrstn";
+			numa-node-id = <1>;
+		};
+
+		d1_dw_hdmi: hdmi@702a0000 {
+			compatible = "eswin,eic7700-es-dw-hdmi";
+			reg = <0x0 0x702a0000 0x0 0x20000>;
+			pinctrl-names = "default";
+			interrupt-parent = <&d1_plic>;
+			interrupts = <274>;
+			clocks = <&d1_clocks EIC7700_CLK_GATE_VO_CFG_CLK>,
+					 <&d1_clocks EIC7700_CLK_DIV_VO_CEC_DYNM>,
+					 <&d1_clocks EIC7700_CLK_GATE_VO_CR_CLK>;
+			clock-names = "iahb", "cec", "isfr";
+			reg-io-width = <4>;
+			ddc-i2c-scl-high-time-ns = <4708>;
+			ddc-i2c-scl-low-time-ns = <4916>;
+			#sound-dai-cells = <0>;
+			resets = <&d1_reset EIC7700_RESET_VO_HDMI_PRST>,
+					 <&d1_reset EIC7700_RESET_VO_HDMI_PHY>,
+					 <&d1_reset EIC7700_RESET_VO_HDMI>;
+			reset-names = "prstn", "phyrstn", "rstn";
+			numa-node-id = <1>;
+		};
+
+		d1_dw_hdmi_hdcp2: hdmi-hdcp2@70290000 {
+			compatible = "eswin,eic7700-dw-hdmi-hdcp2";
+			reg = <0x0 0x70290000 0x0 0x10000>;
+			interrupt-parent = <&d1_plic>;
+			interrupts = <275>;
+			clocks = <&d1_clocks EIC7700_CLK_GATE_VO_ACLK>,
+				 <&d1_clocks EIC7700_CLK_GATE_VO_HDMI_IESMCLK>;
+			clock-names ="aclk", "iesmclk";
+			numa-node-id = <1>;
+		};
+
+		d1_dc: display_control@702c0000 {
+			compatible = "eswin,eic7700-dc";
+			reg = <0x0 0x702c0000 0x0 0x100>, <0x0 0x702c0180 0x0 0x700>, <0x0 0x702c1400 0x0 0x1400>;
+			interrupt-parent = <&d1_plic>;
+			interrupts = <238>;
+			clocks = <&d1_clocks EIC7700_CLK_GATE_VO_CFG_CLK>,
+					 <&d1_clocks EIC7700_CLK_GATE_VO_PIXEL_CLK>,
+					 <&d1_clocks EIC7700_CLK_GATE_VO_ACLK>,
+					 <&d1_clocks EIC7700_CLK_SPLL0_FOUT1>,
+					 <&d1_clocks EIC7700_CLK_MUX_VO_ACLK_ROOT_2MUX1_GFREE>,
+					 <&d1_clocks EIC7700_CLK_MUX_VO_PIXEL_ROOT_2MUX1>,
+					 <&d1_clocks EIC7700_CLK_SPLL2_FOUT2>,
+					 <&d1_clocks EIC7700_CLK_VPLL_FOUT1>;
+			clock-names = "cfg_clk", "pix_clk", "axi_clk", "spll0_fout1", "vo_mux",
+						  "pix_mux", "spll2_fout2", "vpll_fout1";
+			resets = <&d1_reset EIC7700_RESET_VO_AXI>,
+					 <&d1_reset EIC7700_RESET_VO_CFG>,
+					 <&d1_reset EIC7700_RESET_VO_DC>,
+					 <&d1_reset EIC7700_RESET_VO_DC_PRST>;
+			reset-names = "vo_arst", "vo_prst", "dc_arst", "dc_prst";
+			dma-noncoherent;
+			numa-node-id = <1>;
+			d1_dc_out: port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
+		d1_dc_test: dctest@702c0000 {
+			compatible = "eswin,eic7700-dc";
+			reg = <0x0 0x702c0000 0x0 0x10000>;
+			interrupt-parent = <&d1_plic>;
+			interrupts = <238>;
+			numa-node-id = <1>;
+		};
+
 		d1_hsp: bus@70400000 {
 			compatible = "simple-pm-bus";
 			ranges = <0x0 0x70400000 0x0 0x70400000 0x0 0xa0000>;
@@ -876,6 +956,24 @@
 				#address-cells = <3>;
 				#size-cells = <2>;
 			};
+		};
+
+		d1_video_output: display-subsystem@1 {
+			compatible = "eswin,eic7700-display-subsystem";
+			ports = <&d1_dc_out>;
+			numa-node-id = <1>;
+		};
+
+		d1_virtual_display: es_wb@1 {
+			compatible = "eswin,eic7700-virtual_display";
+			bpp = /bits/ 8 <8>;
+			numa-node-id = <1>;
+		};
+
+		d1_dsi_output: dsi-output@1 {
+			compatible = "eswin,eic7700-dsi-encoder";
+			numa-node-id = <1>;
+			status = "disabled";
 		};
 	};
 };
