@@ -9,6 +9,7 @@
 #include <dt-bindings/reset/eswin,eic7700-hspcrg.h>
 #include <dt-bindings/reset/eswin,eic7700-reset.h>
 #include <dt-bindings/riscv/physical-memory.h>
+#include "eic7700-opptable.dtsi"
 
 / {
 	#address-cells = <2>;
@@ -767,6 +768,31 @@
 			resets = <&reset EIC7700_RESET_I2C9>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		gpu: gpu@51400000 {
+			compatible = "img,gpu";
+			reg = <0x0 0x51400000 0x0 0xFFFFF>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			clocks = <&clk EIC7700_CLK_GATE_GPU_ACLK>,
+					<&clk EIC7700_CLK_GATE_GPU_GRAY_CLK>,
+					<&clk EIC7700_CLK_GATE_GPU_CFG_CLK>;
+			clock-names = "aclk", "gray_clk", "cfg_clk";
+			resets =<&reset EIC7700_RESET_GPU_AXI>,
+					<&reset EIC7700_RESET_GPU_CFG>,
+					<&reset EIC7700_RESET_GPU_GRAY>,
+					<&reset EIC7700_RESET_GPU_JONES>,
+					<&reset EIC7700_RESET_GPU_SPU>;
+			reset-names = "axi", "cfg", "gray", "jones","spu";
+			interrupt-parent = <&plic>;
+			interrupts = <15>;
+			dma-noncoherent;
+			numa-node-id = <0>;
+			operating-points-v2 = <&gpu_opp_table>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <4000>; /*TBD*/
 			status = "disabled";
 		};
 
