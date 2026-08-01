@@ -1,0 +1,562 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * ESWIN  driver
+ *
+ * Copyright 2024, Beijing ESWIN Computing Technology Co., Ltd.. All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 2.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Authors: Limei<limei@eswin.com>
+*/
+
+#include "pvrsrv.h"
+#include "pvrsrv_device.h"
+#include "syscommon.h"
+#include "sysinfo.h"
+
+#include "physheap.h"
+
+#include <linux/dma-mapping.h>
+
+#include "rgxdevice.h"
+#include "interrupt_support.h"
+#include "osfunc.h"
+
+#include <linux/version.h>
+
+#include "sysinfo.h"
+#include "apollo_regs.h"
+
+
+#include "vz_vmm_pvz.h"
+#include "allocmem.h"
+#include <linux/platform_device.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
+#include <linux/dma-map-ops.h>
+
+#include <linux/clk.h>
+#include <linux/reset.h>
+#include "rgxdevice.h"
+#if defined(SUPPORT_ION)
+#include "ion_support.h"
+#endif
+#include <asm/dma-noncoherent.h>
+
+#if defined(SUPPORT_VALIDATION) && defined(PDUMP)
+#include "validation_soc.h"
+#endif
+#define ES_MEM_THRESH_OF_FLUSH_CACHE_ALL 0x100000
+
+extern unsigned int _corefreq_div;
+
+IMG_UINT64 *cpu_cache_flush_addr = NULL;
+// static int cache_reg_map = 0;
+#if 0
+extern void eswin_l2_flush64(phys_addr_t addr, size_t size);
+#else
+void eswin_l2_flush64(phys_addr_t addr, size_t size) {
+#if IS_ENABLED(CONFIG_ARCH_ESWIN)
+	EIC770X_LOGICAL_MEM_NODE_E nid;
+	int cpuid;
+	eic770x_memory_type_t mem_type;
+
+	cpuid = smp_processor_id();
+	arch_get_mem_node_and_type(phys_to_pfn(addr), &nid, &mem_type);
+	if (likely(mem_type == FLAT_DDR_MEM)) {
+		if (cpu_to_node(cpuid) != nid) {
+			pr_debug("%s, pid %d addr 0x%llx, size 0x%lx mem_nid %d cur_cpu %d \n",
+				__func__, task_pid_nr(current), addr, size, nid, smp_processor_id());
+			sched_setaffinity(current->pid, cpumask_of_node(nid));
+		}
+	}
+
+	if (unlikely(size > ES_MEM_THRESH_OF_FLUSH_CACHE_ALL))
+		arch_sync_cache_all(addr, size);
+	else
+#else
+#error "CONFIG_ARCH_ESWIN need to define in arch/riscv/configs/xxx_defconfig"
+#endif
+		arch_sync_dma_for_device(addr, size, DMA_TO_DEVICE);
+};
+#endif
+void riscv_invalidate_addr(phys_addr_t addr, size_t size,IMG_BOOL virtual) {
+
+ printk(KERN_ALERT "eswin:%s not implement now start 0x%llx size=0x%lx\n",__func__,addr,size);
+}
+void riscv_flush_addr(IMG_UINT64 cpuaddr,IMG_UINT64 bytes_size, IMG_BOOL virtual)
+{
+		// printk(KERN_ALERT "eswin print %s: ----------riscv_flush_addr--run-----------\n", __func__);
+    IMG_UINT64 bStart = 0;
+    IMG_UINT64 bEnd = 0;
+    // IMG_UINT64 bBase;
+    IMG_UINT64 line_size = (IMG_UINT64)cache_line_size();
+
+    if (virtual)//if cpuaddr is virtual address, here need to convert it to physical address
+        bStart =  page_to_phys(virt_to_page(cpuaddr)) & RGX_ESWIN_CPU_ADDR_MASK;
+    else
+        bStart =  cpuaddr & RGX_ESWIN_CPU_ADDR_MASK;;
+
+    bEnd = bStart + bytes_size;
+
+    bEnd = PVR_ALIGN((IMG_UINT64)bEnd, line_size);
+
+    #if 1
+    eswin_l2_flush64((phys_addr_t)bStart, (size_t)(bEnd-bStart));
+    #else
+    if (cache_reg_map == 0){
+        cache_reg_map = 1;
+	    cpu_cache_flush_addr = (IMG_UINT64 __iomem *)ioremap(RGX_ESWIN_CPU_CACHE_FLUSH_ADDR, 0x10);
+    }
+    if (cpu_cache_flush_addr == NULL){
+        printk(KERN_ALERT "NULL pointer file %s line %d\n", __FILE__, __LINE__);
+        return;
+    }
+    mb();
+    for (bBase = bStart; bBase < bEnd; bBase += line_size)
+    {
+        *(IMG_UINT64 *)cpu_cache_flush_addr = bBase;
+    }
+    mb();
+    #endif
+}
+
+
+PVRSRV_ERROR SysInstallDeviceLISR(IMG_HANDLE hSysData,
+				  IMG_UINT32 ui32IRQ,
+				  const IMG_CHAR *pszName,
+				  PFN_LISR pfnLISR,
+				  void *pvData,
+				  IMG_HANDLE *phLISRData)
+{
+    PVRSRV_ERROR eError;
+    PVR_UNREFERENCED_PARAMETER(hSysData);
+
+    #ifndef NO_HARDWARE
+    eError = OSInstallSystemLISR(phLISRData, ui32IRQ, pszName, pfnLISR, pvData, SYS_IRQ_FLAG_TRIGGER_DEFAULT | SYS_IRQ_FLAG_SHARED);
+    if (eError != PVRSRV_OK)
+		PVR_DPF((PVR_DBG_ERROR, "%s: install error %d != PVRSRV_OK", __func__, eError));
+    #endif
+    return eError;
+}
+
+PVRSRV_ERROR SysUninstallDeviceLISR(IMG_HANDLE hLISRData)
+{
+	return OSUninstallSystemLISR(hLISRData);
+}
+
+PVRSRV_ERROR SysDebugInfo(PVRSRV_DEVICE_CONFIG *psDevConfig,
+				DUMPDEBUG_PRINTF_FUNC *pfnDumpDebugPrintf,
+				void *pvDumpDebugFile)
+{
+	PVR_UNREFERENCED_PARAMETER(psDevConfig);
+	PVR_UNREFERENCED_PARAMETER(pfnDumpDebugPrintf);
+	PVR_UNREFERENCED_PARAMETER(pvDumpDebugFile);
+	return PVRSRV_OK;
+}
+
+
+/*
+	CPU to Device physical address translation
+*/
+static
+void UMAPhysHeapCpuPAddrToDevPAddr(IMG_HANDLE hPrivData,
+								   IMG_UINT32 ui32NumOfAddr,
+								   IMG_DEV_PHYADDR *psDevPAddr,
+								   IMG_CPU_PHYADDR *psCpuPAddr)
+{
+    IMG_UINT32 ui32Idx;
+	PVR_UNREFERENCED_PARAMETER(hPrivData);
+
+	/* Optimise common case */
+	for (ui32Idx = 0; ui32Idx < ui32NumOfAddr; ui32Idx++)
+	{
+		psDevPAddr[ui32Idx].uiAddr = psCpuPAddr[ui32Idx].uiAddr;
+	}
+}
+
+/*
+	Device to CPU physical address translation
+*/
+static
+void UMAPhysHeapDevPAddrToCpuPAddr(IMG_HANDLE hPrivData,
+								   IMG_UINT32 ui32NumOfAddr,
+								   IMG_CPU_PHYADDR *psCpuPAddr,
+								   IMG_DEV_PHYADDR *psDevPAddr)
+{
+    IMG_UINT32 ui32Idx;
+	PVR_UNREFERENCED_PARAMETER(hPrivData);
+
+	/* Optimise common case */
+	for (ui32Idx = 0; ui32Idx < ui32NumOfAddr; ui32Idx++)
+	{
+		psCpuPAddr[ui32Idx].uiAddr = psDevPAddr[ui32Idx].uiAddr;
+	}
+}
+
+
+static PHYS_HEAP_FUNCTIONS gsPhysHeapFuncs =
+{
+	/* pfnCpuPAddrToDevPAddr */
+	UMAPhysHeapCpuPAddrToDevPAddr,
+	/* pfnDevPAddrToCpuPAddr */
+	UMAPhysHeapDevPAddrToCpuPAddr,
+	/* pfnGetRegionId */
+	// NULL,
+};
+
+static PVRSRV_ERROR PhysHeapsCreate(PHYS_HEAP_CONFIG **ppasPhysHeapsOut,
+									IMG_UINT32 *puiPhysHeapCountOut,
+                                    PVRSRV_DEVICE_CONFIG *psDevConfig)
+{
+	PHYS_HEAP_CONFIG *pasPhysHeaps;
+	IMG_UINT32 ui32NextHeapID = 0;
+	IMG_UINT32 uiHeapCount = 1;
+
+
+	uiHeapCount += !PVRSRV_VZ_MODE_IS(NATIVE, DEVCFG, psDevConfig) ? 1:0;
+
+	pasPhysHeaps = OSAllocZMem(sizeof(*pasPhysHeaps) * uiHeapCount);
+	if (!pasPhysHeaps)
+	{
+		return PVRSRV_ERROR_OUT_OF_MEMORY;
+	}
+
+	pasPhysHeaps[ui32NextHeapID].ui32UsageFlags = PHYS_HEAP_USAGE_GPU_LOCAL;
+    //eswin fixme: not sure if following states are okay!
+	pasPhysHeaps[ui32NextHeapID].uConfig.sUMA.pszPDumpMemspaceName = "SYSMEM";
+	pasPhysHeaps[ui32NextHeapID].eType = PHYS_HEAP_TYPE_UMA;
+	pasPhysHeaps[ui32NextHeapID].uConfig.sUMA.psMemFuncs = &gsPhysHeapFuncs;
+	ui32NextHeapID++;
+
+	if (! PVRSRV_VZ_MODE_IS(NATIVE, DEVCFG, psDevConfig))
+	{
+		pasPhysHeaps[ui32NextHeapID].ui32UsageFlags = PHYS_HEAP_USAGE_GPU_LOCAL;
+        //eswin fixme: not sure if following states are okay!
+        pasPhysHeaps[ui32NextHeapID].uConfig.sUMA.pszPDumpMemspaceName = "SYSMEM";
+		pasPhysHeaps[ui32NextHeapID].eType = PHYS_HEAP_TYPE_UMA;
+        pasPhysHeaps[ui32NextHeapID].uConfig.sUMA.psMemFuncs = &gsPhysHeapFuncs;
+		ui32NextHeapID++;
+	}
+
+	*ppasPhysHeapsOut = pasPhysHeaps;
+	*puiPhysHeapCountOut = uiHeapCount;
+
+	return PVRSRV_OK;
+}
+
+static void PhysHeapsDestroy(PHYS_HEAP_CONFIG *pasPhysHeaps)
+{
+	OSFreeMem(pasPhysHeaps);
+}
+
+void SysDevDeInit(PVRSRV_DEVICE_CONFIG *psDevConfig)
+{
+	PhysHeapsDestroy(psDevConfig->pasPhysHeaps);
+	OSFreeMem(psDevConfig);
+}
+
+void riscv_flush_cache_range(IMG_HANDLE hSysData,
+                                        PVRSRV_CACHE_OP eRequestType,
+                                        void *pvVirtStart,
+                                        void *pvVirtEnd,
+                                        IMG_CPU_PHYADDR sCPUPhysStart,
+                                        IMG_CPU_PHYADDR sCPUPhysEnd)
+{
+	IMG_UINT64 bStart = sCPUPhysStart.uiAddr;
+	IMG_UINT64 bEnd = sCPUPhysEnd.uiAddr;
+
+	PVR_UNREFERENCED_PARAMETER(hSysData);
+	// PVR_UNREFERENCED_PARAMETER(eRequestType);
+	PVR_UNREFERENCED_PARAMETER(pvVirtStart);
+	PVR_UNREFERENCED_PARAMETER(pvVirtEnd);
+	switch (eRequestType)
+	{
+	case PVRSRV_CACHE_OP_FLUSH:
+		riscv_flush_addr(bStart, (bEnd - bStart), IMG_FALSE);
+		break;
+	case PVRSRV_CACHE_OP_INVALIDATE:
+		riscv_flush_addr(bStart, (bEnd - bStart), IMG_FALSE);
+		break;
+	case PVRSRV_CACHE_OP_CLEAN:
+		riscv_flush_addr(bStart, (bEnd - bStart), IMG_FALSE);
+		break;
+	default:
+		printk(KERN_ALERT "%s: unhandled eRequestType val=0x%x \n", __func__, eRequestType);
+	}
+}
+PVRSRV_DEVICE_CONFIG *IGPUGetDevConfigByDevNum(IMG_UINT32 ui32DevNum)
+{
+	PVRSRV_DATA *psPVRSRVData = PVRSRVGetPVRSRVData();
+	PVRSRV_DRIVER_MODE eRetMode = DRIVER_MODE_NATIVE;
+	PVRSRV_DEVICE_NODE *psDevNode;
+    PVRSRV_DEVICE_CONFIG *psDevConfig = NULL;
+
+	OSWRLockAcquireRead(psPVRSRVData->hDeviceNodeListLock);
+
+	/* Iterate over all devices. */
+	for (psDevNode = psPVRSRVData->psDeviceNodeList;
+		 psDevNode != NULL;
+		 psDevNode = psDevNode->psNext)
+	{
+		if (psDevNode->sDevId.ui32InternalID == ui32DevNum)
+		{
+			psDevConfig = psDevNode->psDevConfig;
+			break;
+		}
+	}
+
+	OSWRLockReleaseRead(psPVRSRVData->hDeviceNodeListLock);
+
+	return psDevConfig;
+}
+#if defined(CONFIG_PM_DEVFREQ)
+int igpu_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
+{
+	int ret;
+	IMG_UINT32 rgx_freq = 0;
+	PVRSRV_DEVICE_CONFIG *psDevConfig = IGPUGetDevConfigByDevNum(0);
+
+	if(IS_ERR_OR_NULL(psDevConfig))
+	{
+		dev_err(dev, "device config not available\n");
+		return -ENODEV;
+	}
+	rgx_freq= clk_round_rate(psDevConfig->aclk, *freq);//24M -> 800M
+	if (rgx_freq > 0) {
+		ret = clk_set_rate(psDevConfig->aclk, rgx_freq);
+		if (ret) {
+			dev_err(dev, "failed to set aclk: %d\n", ret);
+			return ret;
+		}
+	}
+	rgx_freq = clk_get_rate(psDevConfig->aclk);
+
+	return 0;
+}
+
+int igpu_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
+{
+	PVRSRV_DEVICE_CONFIG *psDevConfig = IGPUGetDevConfigByDevNum(0);
+
+	if(IS_ERR_OR_NULL(psDevConfig))
+	{
+		dev_warn(dev, "config missing, using default 800 MHz\n");
+		*freq = 800000000;
+	}
+	else
+	{
+		*freq = clk_get_rate(psDevConfig->aclk);
+	}
+
+	return 0;
+}
+#endif
+static PVRSRV_ERROR DeviceConfigCreate(void *pvOSDevice, PVRSRV_DEVICE_CONFIG **ppsDevConfig)
+{
+	PVRSRV_DEVICE_CONFIG *psDevConfig;
+	RGX_DATA *psRGXData;
+	RGX_TIMING_INFORMATION *psRGXTimingInfo;
+	PHYS_HEAP_CONFIG *pasPhysHeaps;
+	IMG_UINT32 uiPhysHeapCount;
+	PVRSRV_ERROR eError;
+#ifndef NO_HARDWARE
+	IMG_UINT32 rgx_freq = 0;
+	struct resource res;
+	int ret;
+	struct platform_device *pdev = to_platform_device((struct device *)pvOSDevice);
+	struct device *dev = (struct device *)pvOSDevice;
+#endif //CONFIG_SPARSE_IRQ
+
+	psDevConfig = OSAllocZMem(sizeof(*psDevConfig) +
+							  sizeof(*psRGXData) +
+							  sizeof(*psRGXTimingInfo));
+	if (!psDevConfig)
+	{
+		return PVRSRV_ERROR_OUT_OF_MEMORY;
+	}
+
+	psRGXData = (RGX_DATA *)((IMG_CHAR *)psDevConfig + sizeof(*psDevConfig));
+	psRGXTimingInfo = (RGX_TIMING_INFORMATION *)((IMG_CHAR *)psRGXData + sizeof(*psRGXData));
+	psDevConfig->eDriverMode = DRIVER_MODE_NATIVE;
+	eError = PhysHeapsCreate(&pasPhysHeaps, &uiPhysHeapCount, psDevConfig);
+	if (eError)
+	{
+		goto ErrorFreeDevConfig;
+	}
+
+	/* Setup RGX specific timing data */
+#ifndef NO_HARDWARE
+	psDevConfig->aclk = devm_clk_get_enabled(dev, "aclk");
+	if (IS_ERR(psDevConfig->aclk))
+	{
+		ret = PTR_ERR(psDevConfig->aclk);
+		dev_err(dev, "failed to get aclk: %d\n", ret);
+		return ret;
+	}
+
+	psDevConfig->cfg_clk = devm_clk_get_enabled(dev, "cfg_clk");
+	if (IS_ERR(psDevConfig->cfg_clk))
+	{
+		ret = PTR_ERR(psDevConfig->cfg_clk);
+		dev_err(dev, "failed to get cfg_clk: %d\n", ret);
+		return ret;
+	}
+
+	psDevConfig->gray_clk = devm_clk_get_enabled(dev, "gray_clk");
+	if (IS_ERR(psDevConfig->gray_clk))
+	{
+		ret = PTR_ERR(psDevConfig->gray_clk);
+		dev_err(dev, "failed to get gray_clk: %d\n", ret);
+		return ret;
+	}
+
+	if (_corefreq_div > 800000000)
+		_corefreq_div = 800000000;
+
+	/* 24M -> 800M */
+	rgx_freq= clk_round_rate(psDevConfig->aclk, _corefreq_div);
+	if (rgx_freq > 0) {
+		ret = clk_set_rate(psDevConfig->aclk, rgx_freq);
+		if (ret) {
+			dev_err(dev, "failed to set aclk: %d\n", ret);
+			return ret;
+		}
+		dev_info(dev, "set aclk to %dHZ \n", rgx_freq);
+	}
+
+	rgx_freq = clk_get_rate(psDevConfig->aclk);
+	psRGXTimingInfo->ui32CoreClockSpeed = rgx_freq;
+	dev_info(dev, "read aclk %dHZ \n", rgx_freq);
+
+	psDevConfig->rsts = devm_reset_control_array_get_exclusive(dev);
+	if (IS_ERR(psDevConfig->rsts)) {
+		ret = PTR_ERR(psDevConfig->rsts);
+		dev_err(dev, "failed to get resets\n");
+		return ret;
+	}
+	ret = reset_control_reset(psDevConfig->rsts);
+	if (ret) {
+		dev_err(dev, "failed to resets\n");
+		return ret;
+	}
+#else
+	psRGXTimingInfo->ui32CoreClockSpeed        = RGX_NOHW_CORE_CLOCK_SPEED;
+#endif //CONFIG_SPARSE_IRQ
+	psRGXTimingInfo->bEnableActivePM           = IMG_FALSE;
+	psRGXTimingInfo->bEnableRDPowIsland        = IMG_FALSE;
+	psRGXTimingInfo->ui32ActivePMLatencyms     = SYS_RGX_ACTIVE_POWER_LATENCY_MS;
+
+	/* Set up the RGX data */
+	psRGXData->psRGXTimingInfo = psRGXTimingInfo;
+
+	/* Setup the device config */
+	psDevConfig->pvOSDevice				= pvOSDevice;
+	psDevConfig->pszVersion             = NULL;
+#ifndef NO_HARDWARE
+	psDevConfig->pszName = pdev->name;
+	pr_info("%s: --------------->dev_name=%s\n", __func__, psDevConfig->pszName);
+
+	if (of_address_to_resource(dev->of_node, 0, &res))
+	{
+		dev_err(dev, "%s: failed to get resource of rgx register\n", __func__);
+		eError = PVRSRV_ERROR_INVALID_MEMINFO;
+		goto ErrorFreeDevConfig;
+	}
+	psDevConfig->sRegsCpuPBase.uiAddr = res.start;
+	psDevConfig->ui32RegsSize = resource_size(&res);
+	pr_info("%s: --------------->reg_base=%llx, reg_size=%llx\n", __func__, res.start, resource_size(&res));
+
+	psDevConfig->ui32IRQ = irq_of_parse_and_map(dev->of_node, 0);
+	pr_info("%s: --------------->ui32IRQ=%d\n", __func__, psDevConfig->ui32IRQ);
+	if (!psDevConfig->ui32IRQ)
+	{
+		dev_err(dev, "%s: failed to map GPU interrupt\n", __func__);
+		eError = PVRSRV_ERROR_MAPPING_NOT_FOUND;
+		goto ErrorIrq;
+	}
+#else
+	/* Device setup information */
+	psDevConfig->pszName                = SYS_RGX_DEV_NAME;
+	psDevConfig->sRegsCpuPBase.uiAddr   = RGX_ESWIN_GPU_REG_BASE;
+	psDevConfig->ui32RegsSize           = RGX_ESWIN_GPU_REG_SIZE;
+	psDevConfig->ui32IRQ                = RGX_ESWIN_IRQ_ID;
+#endif
+
+	psDevConfig->pasPhysHeaps			= pasPhysHeaps;
+	psDevConfig->ui32PhysHeapCount		= uiPhysHeapCount;
+
+	psDevConfig->eDefaultHeap = PVRSRV_PHYS_HEAP_GPU_LOCAL;
+
+	//eswin fixme: DRIVER_MODE_NATIVE okay?
+	psDevConfig->eDriverMode = DRIVER_MODE_NATIVE;
+	if (! PVRSRV_VZ_MODE_IS(NATIVE, DEVCFG, psDevConfig))
+	{
+		/* Virtualization support services needs to know which heap ID corresponds to FW */
+		// psDevConfig->aui32PhysHeapID[PVRSRV_DEVICE_PHYS_HEAP_FW_LOCAL] = PHYS_HEAP_IDX_VIRTFW;
+	}
+
+	/* No power management on no HW system */
+	psDevConfig->pfnPrePowerState       = NULL;
+	psDevConfig->pfnPostPowerState      = NULL;
+
+	/* No clock frequency either */
+	psDevConfig->pfnClockFreqGet        = NULL;
+
+	psDevConfig->hDevData               = psRGXData;
+	psDevConfig->hSysData               = NULL;
+	psDevConfig->bDevicePA0IsValid       = IMG_FALSE;
+	psDevConfig->pfnSysDevFeatureDepInit = NULL;
+
+	/* Pdump validation system registers */
+#if defined(SUPPORT_VALIDATION) && defined(PDUMP)
+	PVRSRVConfigureSysCtrl(NULL, PDUMP_FLAGS_CONTINUOUS);
+#if defined(SUPPORT_SECURITY_VALIDATION)
+	PVRSRVConfigureTrustedDevice(NULL, PDUMP_FLAGS_CONTINUOUS);
+#endif
+#endif
+
+	psDevConfig->bHasFBCDCVersion31 = IMG_FALSE;
+
+	*ppsDevConfig = psDevConfig;
+
+	return PVRSRV_OK;
+
+ErrorIrq:
+	irq_dispose_mapping(psDevConfig->ui32IRQ);
+ErrorFreeDevConfig:
+	OSFreeMem(psDevConfig);
+	reset_control_rearm(psDevConfig->rsts);
+
+	return eError;
+}
+
+PVRSRV_ERROR SysDevInit(void *pvOSDevice, PVRSRV_DEVICE_CONFIG **ppsDevConfig)
+{
+	PVRSRV_ERROR eError;
+	dma_set_mask(pvOSDevice, DMA_BIT_MASK(40)); //?why is '40', maybe need ask the hw engineer
+
+	eError = DeviceConfigCreate(pvOSDevice, ppsDevConfig);
+
+	if (eError == PVRSRV_OK){
+		(*ppsDevConfig)->pfnHostCacheMaintenance = riscv_flush_cache_range;
+		(*ppsDevConfig)->bHasPhysicalCacheMaintenance = OS_CACHE_OP_ADDR_TYPE_PHYSICAL;
+	}
+
+	return eError;
+}
+
+/******************************************************************************
+ End of file (sysconfig.c)
+******************************************************************************/
+
