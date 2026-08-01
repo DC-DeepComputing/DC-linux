@@ -239,6 +239,7 @@ obj-$(CONFIG_DRM_LOONGSON) += loongson/
 obj-$(CONFIG_DRM_POWERVR) += imagination/
 obj-$(CONFIG_DRM_VERISILICON_DC) += verisilicon/
 obj-$(CONFIG_DRM_ESWIN) += eswin/
+obj-$(CONFIG_DRM_IMG) += img/
 
 # Ensure drm headers are self-contained and pass kernel-doc
 hdrtest-files := \
