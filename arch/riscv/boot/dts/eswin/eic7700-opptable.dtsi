@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+* Copyright (c) 2026 Beijing ESWIN Computing Technology Co., Ltd.
+*/
+
+#include <dt-bindings/clock/eswin,eic7700-clock.h>
+
+/ {
+	gpu_opp_table: opp-table@gpu {
+		compatible = "operating-points-v2";
+		opp@200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <800000>;
+		};
+		opp@400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <800000>;
+		};
+		opp@800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <800000>;
+		};
+	};
+};
