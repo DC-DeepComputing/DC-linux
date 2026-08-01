@@ -365,6 +365,7 @@ source "drivers/gpu/drm/xe/Kconfig"
 source "drivers/gpu/drm/xen/Kconfig"
 source "drivers/gpu/drm/xlnx/Kconfig"
 source "drivers/gpu/drm/eswin/Kconfig"
+source "drivers/gpu/drm/img/Kconfig"
 
 endif
 
