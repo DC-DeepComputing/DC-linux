@@ -239,6 +239,10 @@
 	status = "okay";
 };
 
+&d1_gpu {
+	status = "disabled";
+};
+
 &d1_pinctrl {
 	/* pin header */
 	status = "okay";
