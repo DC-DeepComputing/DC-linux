@@ -365,6 +365,10 @@
 	status = "okay";
 };
 
+&gpu {
+	status = "okay";
+};
+
 &pinctrl {
 	vrgmii-supply = <&vcc_1v8>;
 };
