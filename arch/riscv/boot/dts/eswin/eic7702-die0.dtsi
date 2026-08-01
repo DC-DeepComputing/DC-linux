@@ -9,6 +9,7 @@
 #include <dt-bindings/reset/eswin,eic7700-hspcrg.h>
 #include <dt-bindings/i2c/i2c.h>
 #include <dt-bindings/gpio/gpio.h>
+#include "eic7700-opptable.dtsi"
 
 #define I2C_BITRATE_STANDARD    100000	/* 100 Kbit/s */
 #define I2C_BITRATE_FAST        400000	/* 400 Kbit/s */
@@ -896,6 +897,32 @@
 			interrupts = <114>;
 			interrupt-parent = <&d0_plic>;
 			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d0_gpu: gpu@51400000 {
+			compatible = "img,gpu";
+			reg = <0x0 0x51400000 0x0 0xFFFFF>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_GPU_ACLK>,
+					<&d0_clocks EIC7700_CLK_GATE_GPU_GRAY_CLK>,
+					<&d0_clocks EIC7700_CLK_GATE_GPU_CFG_CLK>;
+			clock-names = "aclk", "gray_clk", "cfg_clk";
+			resets =<&d0_reset EIC7700_RESET_GPU_AXI>,
+					<&d0_reset EIC7700_RESET_GPU_CFG>,
+					<&d0_reset EIC7700_RESET_GPU_GRAY>,
+					<&d0_reset EIC7700_RESET_GPU_JONES>,
+					<&d0_reset EIC7700_RESET_GPU_SPU>;
+			reset-names = "axi", "cfg", "gray", "jones","spu";
+			interrupt-parent = <&d0_plic>;
+			interrupts = <15>;
+			dma-noncoherent;
+			numa-node-id = <0>;
+
+			operating-points-v2 = <&gpu_opp_table>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <4000>; /*TBD*/
 			status = "disabled";
 		};
 

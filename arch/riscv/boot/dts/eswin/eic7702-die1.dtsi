@@ -831,6 +831,32 @@
 			numa-node-id = <1>;
 		};
 
+		d1_gpu: gpu@71400000 {
+			compatible = "img,gpu";
+			reg = <0x0 0x71400000 0x0 0xFFFFF>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			clocks = <&d1_clocks EIC7700_CLK_GATE_GPU_ACLK>,
+					<&d1_clocks EIC7700_CLK_GATE_GPU_GRAY_CLK>,
+					<&d1_clocks EIC7700_CLK_GATE_GPU_CFG_CLK>;
+			clock-names = "aclk", "gray_clk", "cfg_clk";
+			resets =<&d1_reset EIC7700_RESET_GPU_AXI>,
+					<&d1_reset EIC7700_RESET_GPU_CFG>,
+					<&d1_reset EIC7700_RESET_GPU_GRAY>,
+					<&d1_reset EIC7700_RESET_GPU_JONES>,
+					<&d1_reset EIC7700_RESET_GPU_SPU>;
+			reset-names = "axi", "cfg", "gray", "jones","spu";
+			interrupt-parent = <&d1_plic>;
+			interrupts = <15>;
+			dma-noncoherent;
+			numa-node-id = <1>;
+
+			operating-points-v2 = <&gpu_opp_table>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <4000>; /*TBD*/
+			status = "disabled";
+		};
+
 		d1_gpio: gpio@71600000 {
 			compatible = "snps,dw-apb-gpio";
 			reg = <0x0 0x71600000 0x0 0x80>;
