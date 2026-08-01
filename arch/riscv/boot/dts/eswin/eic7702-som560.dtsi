@@ -231,6 +231,10 @@
 	status = "okay";
 };
 
+&d0_gpu {
+	status = "okay";
+};
+
 &d0_gpio {
 	status = "okay";
 };
@@ -466,6 +470,10 @@
 };
 
 &d1_pcie {
+	status = "okay";
+};
+
+&d1_gpu {
 	status = "okay";
 };
 
