@@ -54,9 +54,9 @@ jobs:
         run: |
           cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/lib 
           zip -r -y modules.zip  modules
-          curl -uadmin:${{secrets.ADMIN_PASS}} -T  modules.zip ${{secrets.JFROG_PATH}}/modules.zip
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  modules.zip ${{secrets.JFROG_PATH}}/dc-linux/modules.zip
           cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/arch/riscv
           zip -r -y boot.zip boot
-          curl -uadmin:${{secrets.ADMIN_PASS}} -T  boot.zip ${{secrets.JFROG_PATH}}/boot.zip
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  boot.zip ${{secrets.JFROG_PATH}}/dc-linux/boot.zip
 
 
