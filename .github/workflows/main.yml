@@ -73,5 +73,10 @@ jobs:
           cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/arch/riscv
           zip -r -y boot.zip boot
           curl -uadmin:${{secrets.ADMIN_PASS}} -T  boot.zip ${{secrets.JFROG_PATH}}/dc-linux/boot.zip
+          cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  linux-image-*riscv64.deb ${{secrets.JFROG_PATH}}/dc-linux/linux-image-riscv64.deb
+          curl -uadmin:${{secrets.ADMIN_PASS}} -T  linux-libc-*riscv64.deb ${{secrets.JFROG_PATH}}/dc-linux/linux-libc-riscv64.deb
+          cd ../
+          sudo rm -rf /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux/
 
 
