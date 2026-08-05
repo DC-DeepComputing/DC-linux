@@ -50,6 +50,7 @@ jobs:
                 make -j$(nproc)
                 DEB_BUILD_PROFILES=pkg.linux-upstream.nokernelheaders  make -j$(nproc) bindeb-pkg
                 make modules_install
+                mv ../*.deb .
               "
           sudo chown -R gitlab-runner:gitlab-runner /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux 
           sudo chmod -R 755 /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/dc-linux
