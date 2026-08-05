@@ -42,7 +42,7 @@ jobs:
               /bin/bash -c "
                 cd /home
                 apt-get update
-                apt-get install libdw-dev -y 
+                apt install -y debhelper libdw-dev libelf-dev rsync
                 export ARCH=riscvexport INSTALL_MOD_PATH=/home && export CROSS_COMPILE=/usr/bin/riscv64-linux-gnu-
                 make defconfig
                 make -j$(nproc)
