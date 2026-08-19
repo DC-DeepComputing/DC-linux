@@ -84,4 +84,5 @@ obj-$(CONFIG_SND_SOC)	+= uniphier/
 obj-$(CONFIG_SND_SOC)	+= ux500/
 obj-$(CONFIG_SND_SOC)	+= xilinx/
 obj-$(CONFIG_SND_SOC)	+= xtensa/
+obj-$(CONFIG_SND_SOC)	+= eswin/
 obj-$(CONFIG_SND_SOC)	+= sdw_utils/
