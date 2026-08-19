@@ -16,6 +16,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
+#include <linux/gpio/consumer.h>
 #include "es8326.h"
 
 struct es8326_priv {
@@ -43,7 +44,17 @@ struct es8326_priv {
 	int version;
 	int hp;
 	int jack_remove_retry;
+	struct gpio_desc *spk_ctl_gpio;
+	bool spk_mute;
+	/* Used when the machine driver never calls set_jack (audio-graph-card) */
+	struct snd_soc_jack *internal_jack;
 };
+
+static void es8326_enable_spk(struct es8326_priv *es8326, bool enable)
+{
+	if (es8326->spk_ctl_gpio)
+		gpiod_set_value_cansleep(es8326->spk_ctl_gpio, enable);
+}
 
 static int es8326_crosstalk1_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
@@ -399,6 +410,9 @@ static const struct _coeff_div coeff_div_v0[] = {
 	{192, 32000, 6144000, 0xE0, 0x02, 0x03, 0x2D, 0x4A, 0x0A, 0x1F, 0x1F},
 	{256, 8000, 2048000, 0x60, 0x00, 0x03, 0x35, 0x0A, 0x1B, 0x1F, 0x7F},
 	{256, 16000, 4096000, 0x20, 0x01, 0x03, 0x35, 0x0A, 0x1B, 0x1F, 0x3F},
+	{256, 11025, 2822400, 0x00, 0x00, 0x20, 0x35, 0x0A, 0x0A, 0x1F, 0x1F},
+	{256, 22050, 5644800, 0x00, 0x00, 0x20, 0x35, 0x0A, 0x0A, 0x1F, 0x1F},
+	{256, 32000, 8192000, 0x00, 0x00, 0x30, 0x2D, 0x0A, 0x0A, 0x1F, 0x1F},
 	{256, 44100, 11289600, 0xE0, 0x00, 0x30, 0x2D, 0x4A, 0x0A, 0x1F, 0x1F},
 	{256, 48000, 12288000, 0xE0, 0x00, 0x30, 0x2D, 0x4A, 0x0A, 0x1F, 0x1F},
 	{384, 32000, 12288000, 0xE0, 0x05, 0x03, 0x2D, 0x4A, 0x0A, 0x1F, 0x1F},
@@ -557,6 +571,18 @@ static int es8326_pcm_hw_params(struct snd_pcm_substream *substream,
 	u8 srate = 0;
 	int coeff, array;
 
+	switch (params_rate(params)) {
+	case 8000:
+		es8326->sysclk = params_rate(params) * 1024;
+		break;
+	case 16000:
+		es8326->sysclk = params_rate(params) * 512;
+		break;
+	default:
+		es8326->sysclk = params_rate(params) * 256;
+		break;
+	}
+
 	if (es8326->version == 0) {
 		coeff_div =  coeff_div_v0;
 		array = ARRAY_SIZE(coeff_div_v0);
@@ -619,6 +645,9 @@ static int es8326_mute(struct snd_soc_dai *dai, int mute, int direction)
 	struct es8326_priv *es8326 = snd_soc_component_get_drvdata(component);
 	unsigned int offset_l, offset_r;
 
+	dev_dbg(component->dev, "%s: mute=%d, direction=%d, hp=%d\n", __func__,
+		mute, direction, es8326->hp);
+
 	if (mute) {
 		if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
 			regmap_write(es8326->regmap, ES8326_HP_CAL, ES8326_HP_OFF);
@@ -649,6 +678,12 @@ static int es8326_mute(struct snd_soc_dai *dai, int mute, int direction)
 		regmap_update_bits(es8326->regmap, ES8326_CLK_INV, 0xc0, 0x00);
                 regmap_update_bits(es8326->regmap, ES8326_CLK_MUX, 0x80, 0x00);
 		if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
+			/* Bring analog/clock back from jack-unplug powerdown. */
+			regmap_write(es8326->regmap, ES8326_ANA_PDN, 0x00);
+			regmap_write(es8326->regmap, ES8326_VMIDSEL, 0x02);
+			regmap_write(es8326->regmap, ES8326_CLK_CTL, ES8326_CLK_ON);
+			regmap_write(es8326->regmap, ES8326_SDINOUT1_IO,
+				     ES8326_IO_DMIC_CLK << ES8326_SDINOUT1_SHIFT);
 			regmap_update_bits(es8326->regmap, ES8326_DAC_DSM, 0x01, 0x01);
 			usleep_range(1000, 5000);
 			regmap_update_bits(es8326->regmap, ES8326_DAC_DSM, 0x01, 0x00);
@@ -669,6 +704,13 @@ static int es8326_mute(struct snd_soc_dai *dai, int mute, int direction)
 					0x0F, 0x00);
 		}
 	}
+
+	/* Speaker amp: on only when playback is unmuted and no jack */
+	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
+		es8326_enable_spk(es8326, !mute && !es8326->hp);
+		es8326->spk_mute = mute;
+	}
+
 	return 0;
 }
 
@@ -719,8 +761,8 @@ static int es8326_set_bias_level(struct snd_soc_component *codec,
 	return 0;
 }
 
-#define es8326_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
-	SNDRV_PCM_FMTBIT_S24_LE)
+#define es8326_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE |\
+	SNDRV_PCM_FMTBIT_S32_LE)
 
 static const struct snd_soc_dai_ops es8326_ops = {
 	.hw_params = es8326_pcm_hw_params,
@@ -856,6 +898,10 @@ static void es8326_jack_detect_handler(struct work_struct *work)
 	unsigned int iface;
 
 	mutex_lock(&es8326->lock);
+	if (!es8326->jack) {
+		mutex_unlock(&es8326->lock);
+		return;
+	}
 	iface = snd_soc_component_read(comp, ES8326_HPDET_STA);
 	dev_dbg(comp->dev, "gpio flag %#04x", iface);
 
@@ -930,6 +976,8 @@ static void es8326_jack_detect_handler(struct work_struct *work)
 			queue_delayed_work(system_dfl_wq, &es8326->jack_detect_work,
 					msecs_to_jiffies(400));
 			es8326->hp = 1;
+			/* Cut speaker amp immediately to avoid plug-in pop */
+			es8326_enable_spk(es8326, false);
 			goto exit;
 		}
 		if (es8326->jack->status & SND_JACK_HEADSET) {
@@ -951,6 +999,9 @@ static void es8326_jack_detect_handler(struct work_struct *work)
 					SND_JACK_HEADSET, SND_JACK_HEADSET);
 			regmap_update_bits(es8326->regmap, ES8326_PGA_PDN,
 					0x08, 0x08);
+			/* Mute PGA briefly while switching mic path to cut plug noise */
+			regmap_update_bits(es8326->regmap, ES8326_PGAGAIN,
+					0x80, 0x80);
 			regmap_write(es8326->regmap, ES8326_ADC1_SRC, 0x00);
 			regmap_write(es8326->regmap, ES8326_ADC2_SRC, 0x00);
 			regmap_update_bits(es8326->regmap, ES8326_PGA_PDN,
@@ -958,6 +1009,9 @@ static void es8326_jack_detect_handler(struct work_struct *work)
 			usleep_range(10000, 15000);
 		}
 	}
+
+	/* Speaker off with a jack inserted, on when unplugged and not muted */
+	es8326_enable_spk(es8326, !es8326->hp && !es8326->spk_mute);
 exit:
 	mutex_unlock(&es8326->lock);
 }
@@ -1091,7 +1145,8 @@ static void es8326_init(struct snd_soc_component *component)
 	regmap_update_bits(es8326->regmap, ES8326_HPDET_TYPE, 0x03, 0x00);
 	regmap_write(es8326->regmap, ES8326_INTOUT_IO,
 		     es8326->interrupt_clk);
-	regmap_write(es8326->regmap, ES8326_SDINOUT1_IO, ES8326_IO_INPUT);
+	regmap_write(es8326->regmap, ES8326_SDINOUT1_IO,
+		     (ES8326_IO_DMIC_CLK << ES8326_SDINOUT1_SHIFT));
 	regmap_write(es8326->regmap, ES8326_SDINOUT23_IO, ES8326_IO_INPUT);
 
 	regmap_write(es8326->regmap, ES8326_ANA_PDN, 0x00);
@@ -1114,6 +1169,7 @@ static void es8326_init(struct snd_soc_component *component)
 
 	msleep(200);
 	regmap_write(es8326->regmap, ES8326_INT_SOURCE, ES8326_INT_SRC_PIN9);
+	queue_delayed_work(system_dfl_wq, &es8326->jack_detect_work, 0);
 }
 
 static int es8326_resume(struct snd_soc_component *component)
@@ -1190,6 +1246,22 @@ static int es8326_probe(struct snd_soc_component *component)
 		es8326->interrupt_clk = 0x00;
 	}
 	dev_dbg(component->dev, "interrupt-clk %x", es8326->interrupt_clk);
+
+	/*
+	 * audio-graph-card does not call component set_jack. Register an
+	 * internal headset jack so plug/unplug mute and amp GPIO still run.
+	 */
+	if (!es8326->jack && es8326->internal_jack && component->card) {
+		ret = snd_soc_card_jack_new(component->card, "Headset",
+					    SND_JACK_HEADSET | SND_JACK_BTN_0 |
+					    SND_JACK_BTN_1 | SND_JACK_BTN_2,
+					    es8326->internal_jack);
+		if (ret)
+			dev_warn(component->dev,
+				 "Failed to create headset jack: %d\n", ret);
+		else
+			es8326->jack = es8326->internal_jack;
+	}
 
 	es8326_init(component);
 	return 0;
@@ -1304,6 +1376,22 @@ static int es8326_i2c_probe(struct i2c_client *i2c)
 		es8326->irq, ret);
 		es8326->irq = -ENXIO;
 	}
+
+	es8326->spk_mute = true;
+	es8326->spk_ctl_gpio = devm_gpiod_get_optional(&i2c->dev, "spk-ctl",
+						       GPIOD_OUT_LOW);
+	if (IS_ERR(es8326->spk_ctl_gpio))
+		return PTR_ERR(es8326->spk_ctl_gpio);
+	if (es8326->spk_ctl_gpio)
+		dev_info(&i2c->dev, "speaker amp GPIO ready\n");
+	else
+		dev_info(&i2c->dev, "speaker amp GPIO not provided\n");
+
+	es8326->internal_jack = devm_kzalloc(&i2c->dev,
+					     sizeof(*es8326->internal_jack),
+					     GFP_KERNEL);
+	if (!es8326->internal_jack)
+		return -ENOMEM;
 
 	es8326->mclk = devm_clk_get_optional(&i2c->dev, "mclk");
 	if (IS_ERR(es8326->mclk)) {
