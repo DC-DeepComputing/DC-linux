@@ -1,0 +1,835 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * DeepComputing FML13V03 (EIC7702).
+ *
+ * Same SoC/module layer as D560: eic7702-som560.dtsi
+ * This file is only the FML13V03 board overlay, structured like
+ * eic7702-d560.dts (do not include that board DTS).
+ */
+
+/dts-v1/;
+
+#include "eic7702-som560.dtsi"
+#include <dt-bindings/pwm/pwm.h>
+
+/ {
+	model = "DeepComputing FML13V03";
+	compatible = "deepcomputing,fml13v03", "eswin,eic7x", "eswin,eic7700";
+
+	aliases {
+		serial0 = &d0_uart0;
+		mmc0 = &d0_sdio0;
+		/delete-property/ ethernet0;
+		/delete-property/ ethernet1;
+		/delete-property/ ethernet2;
+		/delete-property/ ethernet3;
+	};
+
+	/* old FML13V03 NPU SPRAM windows */
+	memory@59000000 {
+		device_type = "memory";
+		reg = <0x0 0x59000000 0x0 0x400000>;
+		numa-node-id = <0>;
+	};
+
+	memory@79000000 {
+		device_type = "memory";
+		reg = <0x0 0x79000000 0x0 0x400000>;
+		numa-node-id = <1>;
+	};
+
+	dummy_3v3: regulator-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "dummy";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	/* old: regulator-gpio69 / die0 GPIO92 */
+	camera_light_power: regulator-camera-light {
+		compatible = "regulator-fixed";
+		regulator-name = "camera-light-power";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&d0_gpioC 28 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d0_gpio92_pins>;
+		regulator-always-on;
+	};
+
+	/* old: regulator-gpio27 */
+	wifi_power: regulator-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "wifi-power";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpios = <&d0_gpioA 27 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <20000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d0_gpio27_pins>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/*
+	 * M.2 Key E WLAN/BT rfkill. Own the GPIOs here — do not also
+	 * attach them to d1_pcie pinctrl, or the controller steals them.
+	 */
+	rfkill_wifi {
+		compatible = "rfkill-gpio";
+		label = "Wi-Fi";
+		radio-type = "wlan";
+		reset-gpios = <&d1_gpioA 16 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d1_gpio16_pins>;
+		status = "okay";
+	};
+
+	rfkill_bt {
+		compatible = "rfkill-gpio";
+		label = "Bluetooth";
+		radio-type = "bluetooth";
+		reset-gpios = <&d1_gpioA 18 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d1_gpio18_pins>;
+		status = "okay";
+	};
+
+	backlight_regulator: regulator-backlight {
+		compatible = "regulator-fixed";
+		regulator-name = "backlight-power";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&d0_pwm0 2 200000 PWM_POLARITY_INVERTED>;
+		power-supply = <&backlight_regulator>;
+		default-brightness-level = <128>;
+	};
+
+	fan_control: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&d0_pwm0 0 100000 PWM_POLARITY_INVERTED>;
+	};
+
+	/*
+	 * Die dtsi on this branch has no SPI / I2S / PWM controller
+	 * nodes. Describe them only in this board file (same MMIO as
+	 * the old FML13V03 tree) so die/som560 stay untouched.
+	 */
+	soc {
+		d0_ssi1: spi@50814000 {
+			compatible = "snps,dw-apb-ssi";
+			reg = <0x0 0x50814000 0x0 0x4000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_SSI1_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_SSI1>;
+			reset-names = "spi";
+			interrupts = <92>;
+			interrupt-parent = <&d0_plic>;
+			num-cs = <1>;
+			/* GPIO CS only: native SPI CS drops when the TX FIFO
+			 * empties and breaks the Cros-EC multi-transfer frame.
+			 */
+			cs-gpios = <&d0_gpioA 6 GPIO_ACTIVE_LOW>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&d0_spi2_data_pins &d0_gpio6_pins>;
+			numa-node-id = <0>;
+			status = "okay";
+
+			fwos_ec: ec@0 {
+				compatible = "google,cros-ec-spi";
+				reg = <0>;
+				spi-max-frequency = <1000000>;
+				rx-sample-delay-ns = <10>;
+				google,cros-ec-spi-pre-delay = <10>;
+				google,cros-ec-spi-msg-delay = <10>;
+				interrupt-parent = <&d0_gpioA>;
+				interrupts = <25 IRQ_TYPE_LEVEL_LOW>;
+				power-status-gpios = <&d0_gpioC 30 GPIO_ACTIVE_HIGH>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&d0_gpio25_pins &d0_gpio62_pins>;
+
+				keyboard-controller {
+					compatible = "google,cros-ec-keyb-switches";
+				};
+
+				cros-ec-poweroff {
+					compatible = "google,cros-ec-poweroff";
+				};
+			};
+		};
+
+		d0_pwm0: pwm@50818000 {
+			compatible = "eswin,pwm-eswin";
+			#pwm-cells = <3>;
+			reg = <0x0 0x50818000 0x0 0x4000>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_LSP_TIMER_PCLK>;
+			clock-names = "pclk";
+			resets = <&d0_reset EIC7700_RESET_TIMER>;
+			reset-names = "rst";
+			pinctrl-names = "default";
+			pinctrl-0 = <&d0_fan_pwm_pins &d0_pwm2_pins>;
+			numa-node-id = <0>;
+			status = "okay";
+		};
+
+		/*
+		 * AON AXI DMAC used by I2S (old tree 518c0000).
+		 * 3-cell specifier: <chan handshake dma-sel-bit>.
+		 *
+		 * Die0 AON DMA only reaches die0 DRAM at 0x80000000.
+		 * Do not copy the 6.6 0x3ff_80000000 window: that also
+		 * covers die1 0x20xxxxxxxx 1:1, and LLP then stays at
+		 * 0x20... with SAR/DAR=0.
+		 */
+		d0_sys_con: syscon@51810000 {
+			compatible = "eswin,eic7700-syscfg", "syscon";
+			reg = <0x0 0x51810000 0x0 0x8000>;
+			numa-node-id = <0>;
+		};
+
+		d0_aon_subsys: aon-subsys-bus {
+			compatible = "simple-bus";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			/*
+			 * Die0 DRAM 1:1 at 0x80000000. AON DMA addresses
+			 * stay 0x8xxxxxxx (same as 6.6). CPU publishes
+			 * descriptors through the 0xc0 uncached alias.
+			 */
+			dma-ranges = <0xc0 0x00000000 0x0 0x80000000
+				      0xf 0x80000000>;
+
+			d0_aon_dmac: dma-controller@518c0000 {
+				compatible = "eswin,eic770x-axi-dma";
+				reg = <0x0 0x518c0000 0x0 0x10000>;
+				interrupt-parent = <&d0_plic>;
+				interrupts = <289>;
+				#dma-cells = <3>;
+				clocks = <&d0_clocks EIC7700_CLK_GATE_AONDMA_ACLK>,
+					 <&d0_clocks EIC7700_CLK_GATE_AONDMA_CFG>;
+				clock-names = "core-clk", "cfgr-clk";
+				resets = <&d0_reset EIC7700_RESET_DMA1_ARST>,
+					 <&d0_reset EIC7700_RESET_DMA1_HRST>;
+				reset-names = "arst", "prst";
+				dma-channels = <16>;
+				snps,dma-masters = <2>;
+				snps,priority = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15>;
+				snps,data-width = <3>;
+				snps,block-size = <0x80000 0x80000 0x80000 0x80000
+						   0x80000 0x80000 0x80000 0x80000
+						   0x80000 0x80000 0x80000 0x80000
+						   0x80000 0x80000 0x80000 0x80000>;
+				snps,axi-max-burst-len = <64>;
+				eswin,syscfg = <&d0_sys_con 0 0x370>;
+				numa-node-id = <0>;
+				dma-noncoherent;
+				status = "okay";
+			};
+		};
+
+		/*
+		 * ESWIN I2S driver (snps,i2s) keys off the node-name
+		 * prefix i2s0/i2s1 and clocks named mclk/apll.
+		 */
+		d0_i2s0: i2s0@50200000 {
+			compatible = "snps,i2s";
+			reg = <0x0 0x50200000 0x0 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#sound-dai-cells = <0>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_VO_I2S_MCLK>,
+				 <&d0_clocks EIC7700_CLK_APLL_FOUT1>;
+			clock-names = "mclk", "apll";
+			resets = <&d0_reset EIC7700_RESET_VO_I2S>,
+				 <&d0_reset EIC7700_RESET_VO_I2S_PRST>,
+				 <&d0_reset EIC7700_RESET_VO_PRST>;
+			reset-names = "i2srst", "i2sprst", "voprst";
+			dmas = <&d0_aon_dmac 4 4 0>, <&d0_aon_dmac 5 5 0>;
+			dma-names = "rx", "tx";
+			dma-noncoherent;
+			numa-node-id = <0>;
+			status = "okay";
+
+			d0_i2s0_port: port {
+				d0_i2s0_endpoint: endpoint {
+					remote-endpoint = <&d0_hdmi_in_i2s>;
+					dai-format = "i2s";
+				};
+			};
+		};
+
+		d0_i2s1: i2s1@50210000 {
+			compatible = "snps,i2s";
+			reg = <0x0 0x50210000 0x0 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#sound-dai-cells = <0>;
+			clocks = <&d0_clocks EIC7700_CLK_GATE_VO_I2S_MCLK>,
+				 <&d0_clocks EIC7700_CLK_APLL_FOUT1>;
+			clock-names = "mclk", "apll";
+			dmas = <&d0_aon_dmac 6 2 1>, <&d0_aon_dmac 7 3 1>;
+			dma-names = "rx", "tx";
+			dma-noncoherent;
+			pinctrl-names = "default";
+			pinctrl-0 = <&d0_i2s1_pins>;
+			numa-node-id = <0>;
+			status = "okay";
+
+			d0_i2s1_port: port {
+				d0_i2s1_endpoint: endpoint {
+					remote-endpoint = <&es8326_endpoint>;
+					dai-format = "i2s";
+				};
+			};
+		};
+	};
+
+	d0_graphcard1: graphcard1 {
+		compatible = "audio-graph-card";
+		label = "ES8326 Audio";
+		dais = <&d0_i2s1_port>;
+		status = "okay";
+	};
+
+	/* HDMI I2S DAI is registered; card stays disabled like old FML13 */
+	d0_graphcard0: graphcard0 {
+		compatible = "audio-graph-card";
+		label = "HDMI Audio-0";
+		dais = <&d0_i2s0_port>;
+		status = "disabled";
+	};
+
+	reserved-memory {
+		npu0_reserved: sprammemory@59000000 {
+			no-map;
+			reg = <0x0 0x59000000 0x0 0x400000>;
+		};
+
+		npu1_reserved: sprammemory@79000000 {
+			no-map;
+			reg = <0x0 0x79000000 0x0 0x400000>;
+		};
+
+		ramoops@fff00000 {
+			compatible = "ramoops";
+			reg = <0x0 0xfff00000 0x0 0x100000>;
+			console-size = <0x40000>;
+			record-size = <0x40000>;
+			ftrace-size = <0x40000>;
+			pmsg-size = <0x40000>;
+			no-map;
+		};
+
+		lpcpu_reserved: g2d_8GB_boundary_reserved_4k {
+			no-map;
+			reg = <0x1 0xfe000000 0x0 0x2000000>;
+		};
+
+		g2d_12GB_boundary_reserved_4k {
+			no-map;
+			reg = <0x2 0xfffff000 0x0 0x1000>;
+		};
+
+		mmz_nid_0_part_0 {
+			compatible = "eswin-reserve-memory";
+			reg = <0x3 0x0 0x1 0x80000000>;
+			no-map;
+		};
+
+		d1_g2d_4GB_boundary_reserved_4k {
+			no-map;
+			reg = <0x20 0xfffff000 0x0 0x1000>;
+		};
+
+		d1_lpcpu_reserved: d1_g2d_8GB_boundary_reserved_4k {
+			no-map;
+			reg = <0x21 0xfe000000 0x0 0x2000000>;
+		};
+
+		mmz_nid_1_part_0 {
+			compatible = "eswin-reserve-memory";
+			reg = <0x22 0x80000000 0x1 0x80000000>;
+			no-map;
+		};
+	};
+};
+
+&d0_clock_24m {
+	clock-frequency = <24000000>;
+	clock-output-names = "d0_clock_24m";
+};
+
+&d1_clock_24m {
+	clock-frequency = <24000000>;
+	clock-output-names = "d1_clock_24m";
+};
+
+/* touchpad IRQ */
+&d0_gpio20_pins {
+	input-enable;
+	bias-disable;
+};
+
+/* wifi power (old GPIO27). Drive the pad as GPIO output. */
+&d0_gpio27_pins {
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+	drive-strength-microamp = <12000>;
+};
+
+/* camera light (old GPIO92) */
+&d0_gpio92_pins {
+	function = "gpio";
+	input-disable;
+	bias-disable;
+};
+
+/* wifi rfkill: die1 GPIO16 */
+&d1_gpio16_pins {
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+/* bt rfkill: die1 GPIO18 */
+&d1_gpio18_pins {
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+/* codec IRQ */
+&d0_gpio28_pins {
+	function = "gpio";
+	input-enable;
+	bias-disable;
+};
+
+/* codec speaker enable (old GPIO111 / portd15) */
+&d0_gpio111_pins {
+	function = "gpio";
+	input-disable;
+	bias-disable;
+};
+
+/* M.2 SSD Key M — no D560 pci-socket GPIO */
+&d0_pcie {
+	status = "okay";
+};
+
+/* M.2 Wi-Fi Key E. rfkill GPIOs stay on the rfkill nodes.
+ * AX210 INIT ucode times out (-110) with ASPM L1 on this RC.
+ */
+&d1_pcie {
+	status = "okay";
+	aspm-no-l0s;
+	aspm-no-l1;
+};
+
+/*
+ * som560 already enables the four DWC3 ports as host. Restate
+ * host mode and mux usb*_pwren so Type-A / internal hubs get VBUS.
+ * Die dtsi caps maximum-speed at high-speed; leave that as-is
+ * (PHY is UTMI, not a USB3 SuperSpeed pipe).
+ */
+&d0_usb0 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_usb0_pwren_pins>;
+	status = "okay";
+};
+
+&d0_usb1 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_usb1_pwren_pins>;
+	status = "okay";
+};
+
+&d1_usb0 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d1_usb0_pwren_pins>;
+	status = "okay";
+};
+
+&d1_usb1 {
+	dr_mode = "host";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d1_usb1_pwren_pins>;
+	status = "okay";
+};
+
+&d1_gpu {
+	status = "disabled";
+};
+
+&d0_sdio0 {
+	eswin,drive-impedance-ohms = <33>;
+	disable-wp;
+	no-mmc;
+	no-sdio;
+	status = "okay";
+};
+
+/* FML13 Wi-Fi is PCIe, not SDIO */
+&d1_sdio0 {
+	status = "disabled";
+};
+
+&d0_sdhci_emmc {
+	status = "disabled";
+};
+
+&d0_sata {
+	status = "disabled";
+};
+
+&d1_sata {
+	status = "disabled";
+};
+
+&d0_gmac0 {
+	status = "disabled";
+};
+
+&d0_gmac1 {
+	status = "disabled";
+};
+
+&d1_gmac0 {
+	status = "disabled";
+};
+
+&d1_gmac1 {
+	status = "disabled";
+};
+
+/* only debug UART; drop D560 MCU/header/BT UARTs */
+&d0_uart2 {
+	status = "disabled";
+};
+
+&d0_uart3 {
+	status = "disabled";
+};
+
+&d1_uart1 {
+	status = "disabled";
+};
+
+&d1_uart2 {
+	status = "disabled";
+};
+
+&d0_wdt0 {
+	status = "disabled";
+};
+
+&d0_wdt1 {
+	status = "disabled";
+};
+
+&d0_wdt2 {
+	status = "disabled";
+};
+
+&d0_wdt3 {
+	status = "disabled";
+};
+
+&d1_wdt0 {
+	status = "disabled";
+};
+
+&d1_wdt1 {
+	status = "disabled";
+};
+
+&d1_wdt2 {
+	status = "disabled";
+};
+
+&d1_wdt3 {
+	status = "disabled";
+};
+
+/*
+ * som560 puts NPU PMIC + tmp102 on AON I2C1 (D560 wiring).
+ * Old FML13V03: PMIC on LSP I2C1, sensors on AON I2C0.
+ */
+&d0_aon_i2c1 {
+	status = "disabled";
+	/delete-node/ tmp102@48;
+	/delete-node/ tps549d22@10;
+};
+
+&d1_aon_i2c1 {
+	status = "disabled";
+	/delete-node/ tps549d22@10;
+};
+
+/*
+ * Shared som560 pinctrl marks I2S pins as function "hdmi", which
+ * pinctrl-eic7700 rejects (those pins only have i2s/gpio). Overlay
+ * the function here so the codec I2S block can probe.
+ */
+&d0_i2s1_pins {
+	function = "i2s";
+};
+
+/*
+ * Cros-EC SPI pinctrl must not put CS into SPI function.
+ * CLK/MOSI/MISO = SPI; spi2_cs0_n (GPIO6) stays GPIO so software
+ * can hold a long CS-low pulse across the whole EC frame.
+ */
+&d0_pinctrl {
+	d0_spi2_data_pins: spi2-data-pins {
+		pins = "jtag0_tck", "jtag0_tms", "jtag0_tdi";
+		function = "spi";
+		input-enable;
+		bias-pull-up;
+	};
+};
+
+&d0_gpio6_pins {
+	pins = "spi2_cs0_n";
+	function = "gpio";
+	input-disable;
+	bias-pull-up;
+};
+
+&d0_gpio25_pins {
+	input-enable;
+	bias-disable;
+};
+
+&d0_gpio62_pins {
+	input-disable;
+	bias-disable;
+};
+
+&d0_dw_hdmi {
+	ports {
+		port@2 {
+			reg = <2>;
+			d0_hdmi_in_i2s: endpoint@1 {
+				system-clock-frequency = <12288000>;
+				remote-endpoint = <&d0_i2s0_endpoint>;
+			};
+		};
+	};
+};
+
+&d0_i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_i2c0_pins>;
+
+	d0_es8326_0: es8326@19 {
+		#sound-dai-cells = <0>;
+		compatible = "everest,es8326";
+		reg = <0x19>;
+		clocks = <&d0_clocks EIC7700_CLK_GATE_VO_I2S_MCLK>;
+		clock-names = "mclk";
+		interrupt-parent = <&d0_gpioA>;
+		interrupts = <28 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d0_gpio28_pins &d0_gpio111_pins>;
+		spk-ctl-gpio = <&d0_gpioD 15 GPIO_ACTIVE_HIGH>;
+		everest,jack-pol = [0e];
+		everest,interrupt-src = [08];
+		everest,interrupt-clk = [45];
+
+		port {
+			es8326_endpoint: endpoint {
+				remote-endpoint = <&d0_i2s1_endpoint>;
+			};
+		};
+	};
+};
+
+&d0_i2c1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_i2c1_pins>;
+
+	tps549d22@10 {
+		compatible = "ti,tps549d22";
+		reg = <0x10>;
+		eswin,regulator_default-microvolt = <1000000>;
+		label = "npu_vdd";
+		regulators {
+			d0_npu_vcc: npu_svcc {
+				regulator-name = "NPU_SVCC";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1120000>;
+				regulator-min-microamp = <20000000>;
+				regulator-max-microamp = <40000000>;
+				regulator-ov-protection-microvolt = <1100000>;
+			};
+		};
+	};
+};
+
+&d1_i2c1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&d1_i2c1_pins>;
+
+	tps549d22@10 {
+		compatible = "ti,tps549d22";
+		reg = <0x10>;
+		eswin,regulator_default-microvolt = <1000000>;
+		label = "d1_npu_vdd";
+		regulators {
+			d1_npu_vcc: npu_svcc {
+				regulator-name = "NPU_SVCC2";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1120000>;
+				regulator-min-microamp = <20000000>;
+				regulator-max-microamp = <40000000>;
+				regulator-ov-protection-microvolt = <1100000>;
+			};
+		};
+	};
+};
+
+&d0_i2c2 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&d0_i2c2_pins>;
+
+	d0_touchpad: hid@2c {
+		compatible = "hid-over-i2c";
+		reg = <0x2c>;
+		hid-descr-addr = <0x0020>;
+		post-power-on-delay-ms = <200>;
+		interrupt-parent = <&d0_gpioA>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&d0_gpio20_pins>;
+		status = "okay";
+	};
+
+	cm32181_sensor: cm32181@10 {
+		compatible = "capella,cm32181";
+		reg = <0x10>;
+		status = "okay";
+	};
+
+	cm32183_sensor: cm32183@29 {
+		compatible = "capella,cm32183";
+		reg = <0x29>;
+		status = "okay";
+	};
+};
+
+/* unused camera / header I2C — same as old FML13 */
+&d0_i2c3 {
+	status = "disabled";
+};
+
+&d0_i2c4 {
+	status = "disabled";
+};
+
+&d0_i2c5 {
+	status = "disabled";
+};
+
+&d0_i2c6 {
+	status = "disabled";
+};
+
+&d0_i2c7 {
+	status = "disabled";
+};
+
+&d0_i2c8 {
+	status = "disabled";
+};
+
+&d0_i2c9 {
+	status = "disabled";
+};
+
+&d1_i2c0 {
+	status = "disabled";
+};
+
+&d1_i2c2 {
+	status = "disabled";
+};
+
+&d1_i2c3 {
+	status = "disabled";
+};
+
+&d1_i2c4 {
+	status = "disabled";
+};
+
+&d1_i2c5 {
+	status = "disabled";
+};
+
+&d1_i2c6 {
+	status = "disabled";
+};
+
+&d1_i2c7 {
+	status = "disabled";
+};
+
+&d1_i2c8 {
+	status = "disabled";
+};
+
+&d1_i2c9 {
+	status = "disabled";
+};
+
+&d0_aon_i2c0 {
+	status = "okay";
+	i2c-sda-hold-time-ns = <0x40>;
+
+	tmp102@48 {
+		compatible = "ti,tmp102";
+		reg = <0x48>;
+		label = "d0_board_tmp";
+		#thermal-sensor-cells = <1>;
+	};
+
+	eeprom@50 {
+		compatible = "atmel,24c02";
+		reg = <0x50>;
+		pagesize = <8>;
+		vcc-supply = <&dummy_3v3>;
+	};
+};
+
+&d1_aon_i2c0 {
+	status = "okay";
+	i2c-sda-hold-time-ns = <0x40>;
+
+	tmp102@48 {
+		compatible = "ti,tmp102";
+		reg = <0x48>;
+		label = "d1_board_tmp";
+		#thermal-sensor-cells = <1>;
+	};
+};
