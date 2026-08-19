@@ -249,6 +249,17 @@ config PWM_DWC
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-dwc.
 
+config PWM_ESWIN
+	tristate "ESWIN DesignWare PWM Controller (platform)"
+	depends on HAS_IOMEM && OF
+	select PWM_DWC_CORE
+	help
+	  Platform PWM driver for the Synopsys DWC block on ESWIN EIC770x
+	  (compatible "eswin,pwm-eswin"). Used by FML13V03 backlight and fan.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-dwc-eswin.
+
 config PWM_EP93XX
 	tristate "Cirrus Logic EP93xx PWM support"
 	depends on ARCH_EP93XX || COMPILE_TEST
