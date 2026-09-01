@@ -264,7 +264,7 @@ struct dma_fence *pvr_counting_fence_create(
 	spin_unlock_irqrestore(&timeline->active_fences_lock, flags);
 
 	/* Counting fences can be signalled any time after creation */
-	dma_fence_enable_sw_signaling(sw_fence);
+	dma_fence_enable_signaling(sw_fence);
 
 	return sw_fence;
 
