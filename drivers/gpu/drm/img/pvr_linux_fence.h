@@ -75,7 +75,7 @@
 #define dma_fence_context_alloc fence_context_alloc
 #define dma_fence_default_wait fence_default_wait
 #define dma_fence_is_signaled fence_is_signaled
-#define dma_fence_enable_sw_signaling fence_enable_sw_signaling
+#define dma_fence_enable_signaling fence_enable_sw_signaling
 #define dma_fence_free fence_free
 #define dma_fence_get fence_get
 #define dma_fence_get_rcu fence_get_rcu

@@ -270,7 +270,7 @@ pvr_sync_finalise_fence(PVRSRV_FENCE fence_fd, void *finalise_data)
 	}
 
 	/* pvr fences can be signalled any time after creation */
-	dma_fence_enable_sw_signaling(&pvr_fence->base);
+	dma_fence_enable_signaling(&pvr_fence->base);
 
 	fd_install(fence_fd, sync_file->file);
 
