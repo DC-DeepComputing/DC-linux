@@ -655,7 +655,7 @@ pvr_buffer_sync_kick_succeeded(struct pvr_buffer_sync_append_data *data)
 	struct dma_resv *resv;
 	int i;
 
-	dma_fence_enable_sw_signaling(&data->update_fence->base);
+	dma_fence_enable_signaling(&data->update_fence->base);
 
 	for (i = 0; i < data->nr_pmrs; i++) {
 		resv = pmr_reservation_object_get(data->pmrs[i]);
