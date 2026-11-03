@@ -396,10 +396,10 @@ static int k3_pcie_init(struct dw_pcie_rp *pp)
 	regmap_set_bits(k1->pmu, k1->pmu_off + PCIE_CONTROL_LOGIC,
 			PCIE_PERSTN_OUT | PCIE_PERSTN_OE);
 
-	val = dw_pcie_readl_dbi(pci, GEN3_EQ_CONTROL_OFF);
+	val = dw_pcie_readl_dbi(pci, GEN3_EQ_CTRL);
 	val = u32_replace_bits(val, BIT(7),
-			       GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC);
-	dw_pcie_writel_dbi(pci, GEN3_EQ_CONTROL_OFF, val);
+			       GEN3_EQ_CTRL_PSET_REQ_VEC);
+	dw_pcie_writel_dbi(pci, GEN3_EQ_CTRL, val);
 
 	k1_pcie_set_device_id(k1);
 
@@ -416,10 +416,10 @@ static int k3_pcie_msi_host_init(struct dw_pcie_rp *pp)
 
 	dw_pcie_dbi_ro_wr_en(pci);
 
-	val = dw_pcie_readl_dbi(pci, COHERENCY_CONTROL_3_OFF);
+	val = dw_pcie_readl_dbi(pci, COHERENCY_CTRL3);
 	val = u32_replace_bits(val, K3_CACHE_MSTR_AWCACHE_BEHAVIOR,
 			       K3_CACHE_MSTR_AWCACHE_MODE);
-	dw_pcie_writel_dbi(pci, COHERENCY_CONTROL_3_OFF, val);
+	dw_pcie_writel_dbi(pci, COHERENCY_CTRL3, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
