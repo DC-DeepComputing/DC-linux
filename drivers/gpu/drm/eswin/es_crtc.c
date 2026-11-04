@@ -38,28 +38,22 @@ void es_crtc_destroy(struct drm_crtc *crtc)
 	kfree(es_crtc);
 }
 
-static void es_crtc_reset(struct drm_crtc *crtc)
+static struct drm_crtc_state *es_crtc_create_state(struct drm_crtc *crtc)
 {
 	struct es_crtc_state *state;
 
-	if (crtc->state) {
-		__drm_atomic_helper_crtc_destroy_state(crtc->state);
-
-		state = to_es_crtc_state(crtc->state);
-		kfree(state);
-		crtc->state = NULL;
-	}
-
 	state = kzalloc(sizeof(*state), GFP_KERNEL);
 	if (state == NULL)
-		return;
+		return ERR_PTR(-ENOMEM);
 
-	__drm_atomic_helper_crtc_reset(crtc, &state->base);
+	__drm_atomic_helper_crtc_state_init(&state->base, crtc);
 
 	state->sync_mode = ES_SINGLE_DC;
 	state->output_fmt = MEDIA_BUS_FMT_RBG888_1X24;
 	state->encoder_type = DRM_MODE_ENCODER_NONE;
 	state->mmu_prefetch = ES_MMU_PREFETCH_DISABLE;
+
+	return &state->base;
 }
 
 static struct drm_crtc_state *
@@ -209,7 +203,7 @@ static const struct drm_crtc_funcs es_crtc_funcs = {
 	.set_config = drm_atomic_helper_set_config,
 	.destroy = es_crtc_destroy,
 	.page_flip = drm_atomic_helper_page_flip,
-	.reset = es_crtc_reset,
+	.atomic_create_state = es_crtc_create_state,
 	.atomic_duplicate_state = es_crtc_atomic_duplicate_state,
 	.atomic_destroy_state = es_crtc_atomic_destroy_state,
 	.atomic_set_property = es_crtc_atomic_set_property,
