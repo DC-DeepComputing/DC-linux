@@ -53,6 +53,7 @@ jobs:
               apt install -y gcc-riscv64-linux-gnu
               make defconfig
               make -j$(nproc) bindeb-pkg
+              curl -uadmin:${{secrets.ADMIN_PASS}} -T  ../linux-image-*riscv64.deb ${{secrets.JFROG_PATH}}/k3-linux/linux-image-riscv64.deb
             "
       - name: send-mail
         if: ${{ failure() && steps.build-linux.conclusion == 'failure' }}
