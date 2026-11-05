@@ -450,7 +450,7 @@ static inline struct page *p4d_page(p4d_t p4d)
 #define pud_index(addr) (((addr) >> PUD_SHIFT) & (PTRS_PER_PUD - 1))
 
 #define pud_offset_lockless(p4dp, p4d, address) \
-	(pgtable_l4_enabled ? p4d_pgtable(p4d) + pud_index(address) : (pud_t *)(p4dp))
+	(pgtable_l4_enabled() ? p4d_pgtable(p4d) + pud_index(address) : (pud_t *)(p4dp))
 
 #define pud_offset pud_offset
 pud_t *pud_offset(p4d_t *p4dp, unsigned long address);
@@ -509,7 +509,7 @@ static inline struct page *pgd_page(pgd_t pgd)
 #define p4d_index(addr) (((addr) >> P4D_SHIFT) & (PTRS_PER_P4D - 1))
 
 #define p4d_offset_lockless(pgdp, pgd, address) \
-	(pgtable_l5_enabled ? pgd_pgtable(pgd) + p4d_index(address) : (p4d_t *)(pgdp))
+	(pgtable_l5_enabled() ? pgd_pgtable(pgd) + p4d_index(address) : (p4d_t *)(pgdp))
 
 #define p4d_offset p4d_offset
 p4d_t *p4d_offset(pgd_t *pgdp, unsigned long address);
