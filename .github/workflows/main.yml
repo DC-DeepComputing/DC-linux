@@ -69,7 +69,7 @@ jobs:
              passd: ${{ secrets.SEND_MAIL }}
         run: |
           cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/ 
-          #sudo rm  -rf k3-linux-hmp
+          sudo rm  -rf k3-linux-hmp
           # zip -r -y modules.zip  modules
           # curl -uadmin:${{secrets.ADMIN_PASS}} -T  modules.zip ${{secrets.JFROG_PATH}}/modules.zip
           # cd /home/gitlab-runner/actions-runner/_work/DC-linux/DC-linux/arch/riscv
