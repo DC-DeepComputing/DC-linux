@@ -387,6 +387,9 @@ static inline unsigned long _pmd_pfn(pmd_t pmd)
 	return __page_val_to_pfn(pmd_val(pmd));
 }
 
+#define pmd_offset_lockless(pudp, pud, address) \
+	(pud_pgtable(pud) + pmd_index(address))
+
 static inline void set_p4d(p4d_t *p4dp, p4d_t p4d)
 {
 	ALT_FIXUP_MT(p4d);
