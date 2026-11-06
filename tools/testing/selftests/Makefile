@@ -125,6 +125,7 @@ TARGETS += seccomp
 TARGETS += sgx
 TARGETS += signal
 TARGETS += size
+TARGETS += spacemit
 TARGETS += sparc64
 TARGETS += splice
 TARGETS += static_keys
