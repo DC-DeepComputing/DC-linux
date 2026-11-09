@@ -31,13 +31,13 @@
 #include <drm/drm_edid.h>
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
-#include <drm/drm_simple_kms_helper.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/bridge/dw_hdmi.h>
 #include <drm/drm_print.h>
 
 #include <drm/drm_mode.h>
+#include <drm/drm_encoder.h>
 #include <linux/videodev2.h>
 #include <linux/media-bus-format.h>
 #include <linux/pm_runtime.h>
@@ -274,11 +274,13 @@ static const struct drm_prop_enum_list colorimetry_enum_list[] = {
 	{ ESWIN_HDMI_COLORIMETRY_BT2020, "ITU_2020" },
 };
 
+#if 0
 static const struct drm_prop_enum_list quant_range_enum_list[] = {
 	{ HDMI_QUANTIZATION_RANGE_DEFAULT, "default" },
 	{ HDMI_QUANTIZATION_RANGE_LIMITED, "limit" },
 	{ HDMI_QUANTIZATION_RANGE_FULL, "full" },
 };
+#endif
 
 static const struct drm_prop_enum_list color_depth_capacity_list[] = {
 	{ BIT(ESWIN_HDMI_DEPTH_8), "8bit" },
@@ -642,6 +644,10 @@ static const struct of_device_id dw_hdmi_eswin_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, dw_hdmi_eswin_dt_ids);
 
+static const struct drm_encoder_funcs es_encoder_hdmi_funcs = {
+		.destroy = drm_encoder_cleanup,
+};
+
 static int dw_hdmi_eswin_bind(struct device *dev, struct device *master,
 			      void *data)
 {
@@ -689,7 +695,8 @@ static int dw_hdmi_eswin_bind(struct device *dev, struct device *master,
 	plat_data->phy_data = hdmi;
 
 	drm_encoder_helper_add(encoder, &dw_hdmi_eswin_encoder_helper_funcs);
-	drm_simple_encoder_init(drm, encoder, DRM_MODE_ENCODER_TMDS);
+	drm_encoder_init(drm, encoder, &es_encoder_hdmi_funcs,
+	       DRM_MODE_ENCODER_TMDS, NULL);
 
 	platform_set_drvdata(pdev, hdmi);
 

@@ -46,7 +46,7 @@ static unsigned char __get_bpp(struct es_virtual_display *vd)
 
 static void vd_dump_destroy(struct es_virtual_display *vd)
 {
-	struct drm_device *drm_dev = vd->encoder.dev;
+	//struct drm_device *drm_dev = vd->encoder.dev;
 
 	if (vd->dump_blob.data) {
 		vunmap(vd->dump_blob.data);
@@ -161,7 +161,7 @@ static void vd_encoder_enable(struct drm_encoder *encoder)
 		dc->funcs->dump_enable(vd->dc, vd->dump_obj->iova, vd->pitch);
 }
 
-int vd_encoder_atomic_check(struct drm_encoder *encoder,
+static int vd_encoder_atomic_check(struct drm_encoder *encoder,
 			    struct drm_crtc_state *crtc_state,
 			    struct drm_connector_state *conn_state)
 {
