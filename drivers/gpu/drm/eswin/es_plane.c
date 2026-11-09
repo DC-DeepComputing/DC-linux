@@ -40,7 +40,7 @@ void es_plane_destory(struct drm_plane *plane)
 	kfree(es_plane);
 }
 
-static void es_plane_reset(struct drm_plane *plane)
+static struct drm_plane_state *es_plane_create_state(struct drm_plane *plane)
 {
 	struct es_plane_state *state;
 
@@ -54,13 +54,15 @@ static void es_plane_reset(struct drm_plane *plane)
 
 	state = kzalloc(sizeof(*state), GFP_KERNEL);
 	if (state == NULL)
-		return;
+		return ERR_PTR(-ENOMEM);
 
-	__drm_atomic_helper_plane_reset(plane, &state->base);
+	__drm_atomic_helper_plane_state_init(&state->base, plane);
 
 	state->degamma = ES_DEGAMMA_DISABLE;
 	state->degamma_changed = false;
 	memset(&state->status, 0, sizeof(state->status));
+
+	return &state->base;
 }
 
 static void _es_plane_duplicate_blob(struct es_plane_state *state,
@@ -221,7 +223,7 @@ const struct drm_plane_funcs es_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
 	.disable_plane = drm_atomic_helper_disable_plane,
 	.destroy = es_plane_destory,
-	.reset = es_plane_reset,
+	.atomic_create_state = es_plane_create_state,
 	.atomic_duplicate_state = es_plane_atomic_duplicate_state,
 	.atomic_destroy_state = es_plane_atomic_destroy_state,
 	.atomic_set_property = es_plane_atomic_set_property,
