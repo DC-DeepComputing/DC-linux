@@ -33,6 +33,18 @@
 		};
 	};
 
+
+	/omit-if-no-ref/
+	edp0_1_cfg: edp0-1-cfg {
+		edp0-pins {
+			pinmux = <K3_PADCONF(23, 6)>;	/* edp0 hpd */
+
+			bias-disable;
+			drive-strength = <25>;
+			power-source = <3300>;
+		};
+	};
+
 	gmac0_rgmii_0_cfg: gmac0-rgmii-0-cfg {
 		gmac0-rgmii-0-pins {
 			pinmux = <K3_PADCONF(0, 1)>,	/* gmac0_rxdv */
