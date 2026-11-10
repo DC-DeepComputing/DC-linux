@@ -209,20 +209,19 @@ static void spacemit_plane_atomic_disable(struct drm_plane *plane,
 	drm_dev_exit(idx);
 }
 
-static void spacemit_plane_reset(struct drm_plane *plane)
+static struct drm_plane_state *
+spacemit_plane_create_state(struct drm_plane *plane)
 {
 	struct spacemit_plane_state *s;
 
-	if (plane->state) {
-		spacemit_plane_atomic_destroy_state(plane, plane->state);
-		plane->state = NULL;
-	}
-
 	s = kzalloc(sizeof(*s), GFP_KERNEL);
-	if (s) {
-		__drm_atomic_helper_plane_reset(plane, &s->state);
-		s->rdma_id = RDMA_INVALID_ID;
-	}
+	if (!s)
+		return ERR_PTR(-ENOMEM);
+
+	__drm_atomic_helper_plane_state_init(&s->state, plane);
+	s->rdma_id = RDMA_INVALID_ID;
+
+	return &s->state;
 }
 
 static struct drm_plane_state *
@@ -304,7 +303,7 @@ static const struct drm_plane_funcs spacemit_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
 	.disable_plane	= drm_atomic_helper_disable_plane,
 	.destroy = drm_plane_cleanup,
-	.reset = spacemit_plane_reset,
+	.atomic_create_state = spacemit_plane_create_state,
 	.atomic_duplicate_state = spacemit_plane_atomic_duplicate_state,
 	.atomic_destroy_state = spacemit_plane_atomic_destroy_state,
 };

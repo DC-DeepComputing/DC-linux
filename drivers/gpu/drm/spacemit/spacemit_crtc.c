@@ -273,29 +273,27 @@ static void spacemit_crtc_destroy_state(struct drm_crtc *crtc,
 	}
 }
 
-static void spacemit_crtc_reset(struct drm_crtc *crtc)
+static struct drm_crtc_state *
+spacemit_crtc_create_state(struct drm_crtc *crtc)
 {
 	struct spacemit_drm_private *priv = crtc->dev->dev_private;
 	struct spacemit_hw_device *hwdev = priv->hwdev;
 	struct spacemit_crtc_state *state;
 
-	if (crtc->state)
-		spacemit_crtc_destroy_state(crtc, crtc->state);
-
 	state = kzalloc_obj(*state);
-	if (!state) {
-		__drm_atomic_helper_crtc_reset(crtc, NULL);
-		return;
-	}
+	if (!state)
+		return ERR_PTR(-ENOMEM);
 
 	state->rdmas = kzalloc_objs(*state->rdmas, hwdev->rdma_nums);
 	if (!state->rdmas) {
 		kfree(state);
-		__drm_atomic_helper_crtc_reset(crtc, NULL);
-		return;
+		return ERR_PTR(-ENOMEM);
 	}
 
-	__drm_atomic_helper_crtc_reset(crtc, &state->base);
+	state->cl.type = CMDLIST_CRTC;
+	__drm_atomic_helper_crtc_state_init(&state->base, crtc);
+
+	return &state->base;
 }
 
 static int spacemit_crtc_enable_vblank(struct drm_crtc *crtc)
@@ -332,7 +330,7 @@ static const struct drm_crtc_funcs spacemit_crtc_funcs = {
 	.destroy = drm_crtc_cleanup,
 	.set_config = drm_atomic_helper_set_config,
 	.page_flip = drm_atomic_helper_page_flip,
-	.reset = spacemit_crtc_reset,
+	.atomic_create_state = spacemit_crtc_create_state,
 	.atomic_duplicate_state = spacemit_crtc_duplicate_state,
 	.atomic_destroy_state = spacemit_crtc_destroy_state,
 	.enable_vblank = spacemit_crtc_enable_vblank,
@@ -589,6 +587,12 @@ static int spacemit_drm_master_bind(struct device *dev)
 	drm_mode_config_reset(drm);
 	drmm_kms_helper_poll_init(drm);
 	drm_helper_hpd_irq_event(drm);
+
+	ret = drm_mode_config_create_initial_state(drm);
+	if (ret) {
+		dev_err(dev, "failed to create initial state: %d\n", ret);
+		goto err_unbind_all;
+	}
 
 	enable_irq(priv->irq_online);
 
