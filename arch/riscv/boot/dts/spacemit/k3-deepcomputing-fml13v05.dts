@@ -5,6 +5,7 @@
 #include <dt-bindings/gpio/gpio.h>
 
 #include "k3.dtsi"
+#include "k3-display.dtsi"
 #include "k3-pinctrl.dtsi"
 
 / {
@@ -280,5 +281,31 @@
 &usb3d {
 	phys = <&usb3d_u2phy>, <&combophy 4 PHY_TYPE_USB3>;
 	phy-names = "usb2-phy", "usb3-phy";
+	status = "okay";
+};
+/*
+ * The FML13V05 routes the second SoC display path (DPU1/DP1) to the
+ * external DisplayPort receptacle and the first one (DPU0/eDP0) to the
+ * built-in 13.3" eDP panel. Enable both DPUs and their downstream
+ * DisplayPort controllers.
+ */
+
+&dpu0_crtc0 {
+	status = "okay";
+};
+
+&edp0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&edp0_1_cfg>;
+	status = "okay";
+};
+
+&dpu1_crtc0 {
+	status = "okay";
+};
+
+&dp1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&dp1_1_cfg>;
 	status = "okay";
 };
