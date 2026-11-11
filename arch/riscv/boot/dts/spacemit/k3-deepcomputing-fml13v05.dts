@@ -41,6 +41,17 @@
 		regulator-always-on;
 	};
 
+	reg_wlan_3v3: regulator-wlan-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "WLAN_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio K3_GPIO(41) GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
 	rfkill-pcie-wlan {
 		compatible = "rfkill-gpio";
 		label = "rfkill-pcie-wlan";
