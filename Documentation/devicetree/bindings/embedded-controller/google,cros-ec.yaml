@@ -36,6 +36,10 @@ properties:
       - description:
           For implementations of the EC connected through UART.
         const: google,cros-ec-uart
+      - description:
+          For implementations of the EC connected through an eSPI
+          peripheral shared-memory window.
+        const: google,cros-ec-espi
 
   controller-data: true
 
