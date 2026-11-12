@@ -149,6 +149,16 @@ config STM32_DBG_BUS
 	  platforms when the debug configuration is not accessible by the
 	  normal world.
 
+config SPACEMIT_ESPI_BUS
+	bool "SpacemiT K3 eSPI controller"
+	depends on OF && HAS_IOMEM
+	depends on ARCH_SPACEMIT || COMPILE_TEST
+	help
+	  Enable the SpacemiT K3 eSPI controller, including clock and reset
+	  management, link initialization and recovery after an EC reboot.
+	  Child devices can use its peripheral shared-memory window.
+	  Say Y here to use the EC keyboard on DeepComputing FML13V05.
+
 config STM32_FIREWALL
 	bool "STM32 Firewall framework"
 	depends on (ARCH_STM32 || COMPILE_TEST) && OF
